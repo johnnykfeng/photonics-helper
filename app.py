@@ -55,28 +55,6 @@ elif page == "Frequency-Wavelength Plot":
     import plots_page
     plots_page.run()
 
-# elif page == "Transmission Plot":
-#     st.header("Transmission Plot")
-    
-#     st.subheader("Generate Sample Data")
-#     col1, col2, col3 = st.columns(3)
-    
-#     with col1:
-#         center_freq = st.number_input("Center Frequency (GHz)", value=300.0)
-#     with col2:
-#         bandwidth = st.number_input("Bandwidth (GHz)", value=50.0)
-#     with col3:
-#         max_transmission = st.number_input("Max Transmission (dB)", value=0.0)
-    
-#     if st.button("Generate Transmission Plot"):
-#         frequencies = np.linspace(center_freq - bandwidth/2, center_freq + bandwidth/2, 1000)
-#         # Simple Gaussian-like transmission curve
-#         transmission = max_transmission - 3 * ((frequencies - center_freq) / (bandwidth/4))**2
-#         transmission = np.maximum(transmission, -60)  # Limit minimum transmission
-        
-#         fig = transmission_plot(frequencies, transmission)
-#         st.pyplot(fig)
-
 elif page == "About":
     st.header("About Photonics Helper")
     st.markdown("""
