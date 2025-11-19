@@ -1,3 +1,6 @@
+**Note to dev:**
+* My local environment is in mamba, use `mamba activate photonics-helper`
+
 This is a streamlit app that helps us do common calculations in photonics, such as unit conversions and basic plots.
 
 ## Default units
