@@ -7,3 +7,4 @@ power_mW = 1
 power_dBm = 0
 linewidth_GHz = 10.0
 linewidth_nm = 0.01
+linewidth_MHz = 10000.0

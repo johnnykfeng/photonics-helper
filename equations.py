@@ -2,34 +2,34 @@ import numpy as np
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 
-c = 2.998e8  # Speed of light in m/s
+speed_of_light = 2.998e8  # Speed of light in m/s
 
 # Conversion functions
 def frequency_to_wavelength(freq_ghz):
     """Convert frequency in GHz to wavelength in nm"""
     freq_hz = freq_ghz * 1e9
-    wavelength_m = c / freq_hz
+    wavelength_m = speed_of_light / freq_hz
     wavelength_nm = wavelength_m * 1e9
     return wavelength_nm
 
 def wavelength_to_frequency(wavelength_nm):
     """Convert wavelength in nm to frequency in GHz"""
     wavelength_m = wavelength_nm * 1e-9
-    freq_hz = c / wavelength_m
+    freq_hz = speed_of_light / wavelength_m
     freq_ghz = freq_hz / 1e9
     return freq_ghz
 
 def omega_to_wavelength(omega_trad_s):
     """Convert angular frequency in Trad/s to wavelength in nm"""
     omega_rad_s = omega_trad_s * 1e12
-    wavelength_m = 2 * np.pi * c / omega_rad_s
+    wavelength_m = 2 * np.pi * speed_of_light / omega_rad_s
     wavelength_nm = wavelength_m * 1e9
     return wavelength_nm
 
 def wavelength_to_omega(wavelength_nm):
     """Convert wavelength in nm to angular frequency in Trad/s"""
     wavelength_m = wavelength_nm * 1e-9
-    omega_rad_s = 2 * np.pi * c / wavelength_m
+    omega_rad_s = 2 * np.pi * speed_of_light / wavelength_m
     omega_trad_s = omega_rad_s / 1e12
     return omega_trad_s
 
@@ -62,6 +62,47 @@ def linewidth_nm_to_GHz(linewidth_nm, center_wavelength_nm):
     freq2_ghz = wavelength_to_frequency(center_wavelength_nm - linewidth_nm/2)
     return abs(freq1_ghz - freq2_ghz)
 
+def linewidth_wvl_to_freq(linewidth_wvl, center_wavelength_nm, freq_unit="MHz"):
+    """Convert linewidth from wavelength to frequency"""
+    freq_Hz = linewidth_wvl*1e-9 * speed_of_light / ((center_wavelength_nm*1e-9)**2)
+    if freq_unit == "GHz":
+        return freq_Hz * 1e-9
+    elif freq_unit == "MHz":
+        return freq_Hz * 1e-6
+    elif freq_unit == "KHz":
+        return freq_Hz * 1e-3
+    elif freq_unit == "THz":
+        return freq_Hz * 1e-12
+    elif freq_unit == "Hz":
+        return freq_Hz
+    else:
+        raise ValueError(f"Invalid frequency unit: {freq_unit}")
+
+def linewidth_freq_to_wvl(linewidth_freq, center_wavelength_nm, freq_unit="MHz"):
+    """Convert linewidth from frequency in any unit to wavelength (nm)
+    Args:
+        linewidth_freq: Linewidth in frequency units
+        center_wavelength_nm: Center wavelength in nm
+        freq_unit: Frequency unit
+    Returns:
+        Linewidth in wavelength nm
+    """
+
+    if freq_unit == "GHz":
+        linewidth_Hz = linewidth_freq * 1e9
+    elif freq_unit == "MHz":
+        linewidth_Hz = linewidth_freq * 1e6
+    elif freq_unit == "KHz":
+        linewidth_Hz = linewidth_freq * 1e3
+    elif freq_unit == "THz":
+        linewidth_Hz = linewidth_freq * 1e12
+    elif freq_unit == "Hz":
+        linewidth_Hz = linewidth_freq
+    else:
+        raise ValueError(f"Invalid frequency unit: {freq_unit}")
+    linewidth_wvl_m = linewidth_Hz * ((center_wavelength_nm*1e-9)**2) / speed_of_light
+    return linewidth_wvl_m * 1e9
+    
 # Plotting functions
 def frequency_vs_wavelength(freq_range_ghz=None, wavelength_range_nm=None):
     """Plot frequency vs wavelength relationship"""

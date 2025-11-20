@@ -23,7 +23,7 @@ st.divider()
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("Frequency ↔ Wavelength")
+    st.subheader("$f \leftrightarrow \lambda$")
     freq_input = st.number_input("Input Frequency (GHz)", value=defaults["frequency"], step=0.1)
     wavelength = frequency_to_wavelength(freq_input)
     st.info(f"$\\lambda$ = {wavelength:.3f} nm")
@@ -33,7 +33,7 @@ with col1:
     st.info(f"$f$ = {frequency:.3f} GHz")
 
 with col2:
-    st.subheader("Angular Frequency ↔ Wavelength")
+    st.subheader("$\omega \leftrightarrow \lambda$")
     omega_input = st.number_input("Angular Frequency (Trad/s)", value=defaults["omega"], step=0.1)
     wavelength = omega_to_wavelength(omega_input)
     st.info(f"$\\lambda$ = {wavelength:.3f} nm")
@@ -46,17 +46,17 @@ st.divider()
 col3, col4 = st.columns(2)
 
 with col3:
-    st.subheader("dB ↔ Percentage")
-    db_input = st.number_input("dB", value=0.0, step=0.1)
+    st.subheader("$T[dB] \leftrightarrow T[\\%]$")
+    db_input = st.number_input("$T[dB]$", value=0.0, step=0.1)
     percent = dB_to_percent(db_input)
     st.info(f"$T$ = {percent:.3f}%")
     
-    percent_input = st.number_input("Percentage (%)", value=100.0, step=0.1)
+    percent_input = st.number_input("$T[\\%]$", value=100.0, step=0.1)
     db = percent_to_dB(percent_input)
     st.info(f"$T[dB]$ = {db:.3f} dB")
 
 with col4:
-    st.subheader("Power: mW ↔ dBm")
+    st.subheader("$P[mW] \leftrightarrow P[dBm]$")
     mw_input = st.number_input("Power (mW)", value=1.0, step=0.1)
     dbm = mW_to_dBm(mw_input)
     st.info(f"$P[dBm]$ = {dbm:.3f} dBm")
