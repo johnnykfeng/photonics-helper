@@ -13,6 +13,6 @@ pg = st.navigation([
     plots_page, 
     tables_page,
     about_page])
-st.set_page_config(page_title="Photonics Helper", page_icon="🔬", layout="centered")
+st.set_page_config(page_title="Photonics Calculator", page_icon="🔬", layout="centered")
 pg.run()
 
