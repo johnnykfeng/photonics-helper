@@ -103,39 +103,3 @@ def linewidth_freq_to_wvl(linewidth_freq, center_wavelength_nm, freq_unit="MHz")
     linewidth_wvl_m = linewidth_Hz * ((center_wavelength_nm*1e-9)**2) / speed_of_light
     return linewidth_wvl_m * 1e9
     
-# Plotting functions
-def frequency_vs_wavelength(freq_range_ghz=None, wavelength_range_nm=None):
-    """Plot frequency vs wavelength relationship"""
-    if freq_range_ghz is None:
-        freq_range_ghz = np.linspace(100, 1000, 1000)  # 100-1000 GHz
-    
-    wavelengths = [frequency_to_wavelength(f) for f in freq_range_ghz]
-    
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.plot(freq_range_ghz, wavelengths, 'b-', linewidth=2)
-    ax.set_xlabel('Frequency (GHz)')
-    ax.set_ylabel('Wavelength (nm)')
-    ax.set_title('Frequency vs Wavelength')
-    ax.grid(True, alpha=0.3)
-    
-    return fig
-
-def frequency_vs_wavelength_plotly(freq_range_ghz=None, wavelength_range_nm=None):
-    """Plot frequency vs wavelength relationship"""
-    if freq_range_ghz is None:
-        freq_range_ghz = np.linspace(100, 1000, 1000)  # 100-1000 GHz
-    
-    wavelengths = [frequency_to_wavelength(f) for f in freq_range_ghz]
-    
-    return wavelengths
-
-def transmission_plot(frequencies, transmission_dB):
-    """Plot transmission vs frequency"""
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.plot(frequencies, transmission_dB, 'r-', linewidth=2)
-    ax.set_xlabel('Frequency (GHz)')
-    ax.set_ylabel('Transmission (dB)')
-    ax.set_title('Transmission vs Frequency')
-    ax.grid(True, alpha=0.3)
-    
-    return fig
