@@ -4,11 +4,17 @@ import plotly.graph_objects as go
 
 st.set_page_config(page_title="Ring Resonator Model", page_icon="🔄", layout="wide")
 
-st.header("Ring Resonator Model")
-st.divider()
+st.title("Ring Resonator Model")
+# st.divider()
 
-# Default resonance frequency for Q calculations (193 THz = telecom wavelength)
-OMEGA_M_DEFAULT = 193e12 * 2 * np.pi  # rad/s
+cols = st.columns(2)
+with cols[0]:
+    # Default resonance frequency for Q calculations (193 THz = telecom wavelength)
+    RESONANCE_WAVELENGTH = st.number_input("Resonance Wavelength (nm)", value=1550.0, step=0.1)
+with cols[1]:
+    # OMEGA_M_DEFAULT = 193e12 * 2 * np.pi  # rad/s
+    OMEGA_M_DEFAULT = 2*np.pi*2.998e8/(RESONANCE_WAVELENGTH*1e-9)
+    st.write(f"OMEGA_M_DEFAULT: {OMEGA_M_DEFAULT:.2e} rad/s")
 
 # Sidebar for parameter sliders
 with st.sidebar:
@@ -16,17 +22,18 @@ with st.sidebar:
     
     # Ring parameters
     st.markdown("### Ring Parameters")
-    a = st.slider("a (Ring transmission magnitude)", 0.8, 1.0, 0.95, 0.01)
-    sigma = st.slider("σ (Coupler transmission coefficient)", 0.5, 1.0, 0.9, 0.01)
+    a = st.slider("$a$ (Ring transmission magnitude)", 0.50, 1.00, 0.950, 0.001, format="%.3f")
+    sigma = st.slider("$\\sigma$ (Coupler transmission coefficient)", 0.50, 1.00, 0.900, 0.001, format="%.3f")
     
     # Frequency parameters
     st.markdown("### Frequency Parameters")
-    f_delta = st.slider("f_delta (Δf, splitting distance) (GHz)", 0.0, 10.0, 0.0, 0.01,
-                        help="Splitting distance between Lorentzian peaks. Used to calculate phi_a = π * (f_delta / FSR_ring)")
-    f_offset_min = st.number_input("Frequency offset min (GHz)", value=-5.0, step=0.1,
-                                    help="Minimum frequency offset (f - f₀) for plotting")
-    f_offset_max = st.number_input("Frequency offset max (GHz)", value=5.0, step=0.1,
-                                    help="Maximum frequency offset (f - f₀) for plotting")
+    f_split = st.slider("f_split (Δf, splitting distance) (GHz)", 0.0, 10.0, 0.0, 0.01,
+                        help="Splitting distance between Lorentzian peaks. Used to calculate phi_a = π * (f_split / FSR_ring)")
+    number_of_points = st.number_input("Number of points", value=10000, step=1)
+    f_offset_min_limit = st.number_input("Frequency offset min limit (GHz)", value=-50.0, step=0.1)
+    f_offset_max_limit = st.number_input("Frequency offset max limit (GHz)", value=50.0, step=0.1)
+    f_offset_min, f_offset_max = st.slider("Frequency offset range (GHz)", f_offset_min_limit, f_offset_max_limit, (-5.0, 5.0), 0.1,
+                                           help="Frequency offset range (f - f₀) for plotting")
     f_FSRring = st.slider("FSR_ring (GHz)", 1.0, 100.0, 10.0, 0.1)
     f_FSRfp = st.slider("FSR_fp (GHz)", 1.0, 100.0, 10.0, 0.1)
     
@@ -45,12 +52,12 @@ with st.sidebar:
     IL_r = st.slider("IL_r (Reflection insertion loss)", 0.5, 1.0, 1.0, 0.01)
 
 # Generate frequency offset range for plotting
-f_offset = np.linspace(f_offset_min, f_offset_max, 1000)  # GHz (f - f₀)
+f_offset = np.linspace(f_offset_min, f_offset_max, number_of_points)  # GHz (f - f₀)
 
 # Calculate intermediate parameters
-# phi_a from user's clarification: phi_a = pi * (f_delta / FSR_ring)
-# where f_delta is the splitting distance (Delta f)
-phi_a = np.pi * (f_delta / f_FSRring)
+# phi_a from user's clarification: phi_a = pi * (f_split / FSR_ring)
+# where f_split is the splitting distance (Delta f)
+phi_a = np.pi * (f_split / f_FSRring)
 
 # Calculate tau and |rho| from a and phi_a
 # From: a = sqrt(tau^2 + |rho|^2) and phi_a = arctan(|rho|/tau)
@@ -92,7 +99,7 @@ T_full = (A_t / 4) * np.abs(numerator / denominator)**2
 # Delta_omega_FSR = 2*pi*FSR_ring (convert GHz to rad/s)
 Delta_omega_FSR = 2 * np.pi * f_FSRring * 1e9  # rad/s
 
-# Use values at resonance (f_delta = 0) for Q calculations
+# Use values at resonance (f_split = 0) for Q calculations
 # At resonance: phi_a = 0, so tau = a, |rho| = 0
 # But we need to use the actual a and sigma values
 # Q calculations use natural log, need to handle edge cases
@@ -119,11 +126,19 @@ else:
     eta_esc = np.nan
 
 # Main content area
-col1, col2 = st.columns([2, 1])
+col1, col2 = st.columns([3, 1])
 
 with col1:
     st.subheader("Transmission (T_full)")
-    
+    dB_toggle = st.checkbox("Show in dB", value=False)
+
+    if dB_toggle:
+        T_full = 10 * np.log10(T_full)
+        yaxis_title = 'Transmission (dB)'
+        T_min, T_max = st.slider("Transmission range (dB)", -100.0, 0.0, (-10.0, 0.0), 0.1)
+    else:
+        yaxis_title = 'Transmission (linear)'
+        T_min, T_max = st.slider("Transmission range", 0.0, 1.0, (0.0, 1.0), 0.01)
     # Create Plotly figure
     fig = go.Figure()
     fig.add_trace(go.Scatter(
@@ -143,15 +158,17 @@ with col1:
         xaxis_title='Frequency Offset (f - f₀) [GHz]',
         yaxis_title='Transmission',
         template='plotly_white',
-        height=500
+        height=500,
+        xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', griddash='dash'),
+        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgray', griddash='dash'),
+        yaxis_range=[T_min, T_max],
+        # legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
     
     st.plotly_chart(fig, use_container_width=True)
 
 with col2:
-    st.subheader("Derived Metrics")
-    
-    st.markdown("### Quality Factors")
+    st.subheader("Quality Factors")
     if not np.isnan(Q_load):
         st.metric("Loaded Q", f"{Q_load/1e6:.2f} M", help="Q_load = -ω_m/(Δω_FSR) * π/ln(σa)")
     else:
@@ -167,22 +184,26 @@ with col2:
     else:
         st.write("Intrinsic Q: Invalid (check parameters)")
     
-    st.divider()
-    
-    st.markdown("### Escape Efficiency")
+    st.subheader("Escape Efficiency")
     if not np.isnan(eta_esc):
-        st.metric("η_esc", f"{eta_esc:.4f}", help="η_esc = ln(σ)/ln(σa)")
+        st.metric("$\\eta_{esc}$", f"{eta_esc:.4f}", help="$\\eta_{esc} = ln(\\sigma)/ln(\\sigma a)$")
     else:
         st.write("Escape Efficiency: Invalid (check parameters)")
+    # st.markdown("### Coupling Condition")
+    if eta_esc >= 0.499 and eta_esc <= 0.501:
+        st.metric("Coupling Condition", "Critical")
+    elif eta_esc > 0.5:
+        st.metric("Coupling Condition", "Overcoupled")
+    else:
+        st.metric("Coupling Condition", "Undercoupled")
     
-    st.divider()
-    
-    st.markdown("### Additional Parameters")
-    st.write(f"**τ:** {tau:.4f}")
-    st.write(f"**|ρ|:** {rho_mag:.4f}")
-    st.write(f"**φ_a:** {phi_a:.4f} rad ({np.degrees(phi_a):.2f}°)")
-    st.write(f"**A_t:** {A_t:.6f}")
-    st.write(f"**r_e:** {r_e:.4f}")
+
+st.subheader("Additional Parameters")
+st.write(f"**$\\tau$:** {tau:.4f}")
+st.write(f"**$|\\rho|$:** {rho_mag:.4f}")
+st.write(f"**$\\phi_a$:** {phi_a:.4f} rad ({np.degrees(phi_a):.2f}°)")
+st.write(f"**$A_t$:** {A_t:.6f}")
+st.write(f"**$r_e$:** {r_e:.4f}")
 
 # Additional information
 with st.expander("Model Information", expanded=False):
@@ -190,20 +211,21 @@ with st.expander("Model Information", expanded=False):
     This model implements the **Ring Resonator With Back Reflection** transmission model.
     
     **Key Equations:**
-    - Transmission: T_full = (A_t/4) × |numerator/denominator|²
-    - Quality Factors: Q = -ω_m/(Δω_FSR) × π/ln(parameter)
-    - Escape Efficiency: η_esc = ln(σ)/ln(σa)
-    
+    - Transmission: $T_{full} = \\frac{A_t}{4} \\left| \\frac{\\text{numerator}}{\\text{denominator}} \\right|^2$ 
+    - Quality Factors: $Q_{load, m} = \\frac{\\omega_m}{\\Delta\\omega_{FSR}} \\frac{\\pi}{\\ln(\\sigma a)}$
+    - Quality Factors: $Q_{ext, m} = \\frac{\\omega_m}{\\Delta\\omega_{FSR}} \\frac{\\pi}{\\ln(\\sigma)}$
+    - Quality Factors: $Q_{int, m} = \\frac{\\omega_m}{\\Delta\\omega_{FSR}} \\frac{\\pi}{\\ln(a)}$
+    - Escape Efficiency: $\\eta_{esc} = \\frac{\\ln(\\sigma)}{\\ln(\\sigma a)}$
+
     **Parameters:**
-    - **a**: Ring transmission magnitude (|a_±| = √(τ² + |ρ|²))
-    - **σ**: Coupler transmission coefficient
-    - **f_delta**: Splitting distance (Δf) between Lorentzian peaks, used to calculate φ_a = π × (f_delta / FSR_ring)
-    - **FSR_ring**: Free spectral range of the ring
-    - **FSR_fp**: Free spectral range of the Fabry-Pérot cavity
-    - **r**: Facet reflectivity
-    - **t_fp**: Fabry-Pérot transmission coefficient
-    - **δ**: Phase difference (φ_d + φ_e)
-    
-    For more details, see the documentation in `docs/Ring_Resonator_Model.md`.
-    """)
+    - **$a$**: Ring transmission magnitude ($|a_{\pm}| = \\sqrt{\\tau^2 + |\\rho|^2}$)
+    - **$\sigma$**: Coupler transmission coefficient
+    - **$f_{split}$**: Splitting distance ($\Delta f$) between Lorentzian peaks, used to calculate $\phi_a = \\pi \\times (f_{split} / FSR_{ring})$
+    - **$FSR_{ring}$**: Free spectral range of the ring
+    - **$FSR_{fp}$**: Free spectral range of the Fabry-Pérot cavity
+    - **$r$**: Facet reflectivity
+    - **$t_{fp}$**: Fabry-Pérot transmission coefficient
+    - **$\delta$**: Phase difference ($\phi_d + \phi_e$)
+    """
+    )
 
