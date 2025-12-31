@@ -27,19 +27,22 @@ with st.sidebar:
     
     # Frequency parameters
     st.markdown("### Frequency Parameters")
-    f_split = st.slider("f_split (Δf, splitting distance) (GHz)", 0.0, 10.0, 0.0, 0.01,
-                        help="Splitting distance between Lorentzian peaks. Used to calculate phi_a = π * (f_split / FSR_ring)")
     number_of_points = st.number_input("Number of points", value=10000, step=1)
     f_offset_min_limit = st.number_input("Frequency offset min limit (GHz)", value=-50.0, step=0.1)
     f_offset_max_limit = st.number_input("Frequency offset max limit (GHz)", value=50.0, step=0.1)
     f_offset_min, f_offset_max = st.slider("Frequency offset range (GHz)", f_offset_min_limit, f_offset_max_limit, (-5.0, 5.0), 0.1,
                                            help="Frequency offset range (f - f₀) for plotting")
-    f_FSRring = st.slider("FSR_ring (GHz)", 1.0, 100.0, 10.0, 0.1)
-    f_FSRfp = st.slider("FSR_fp (GHz)", 1.0, 100.0, 10.0, 0.1)
+
+    f_split = st.slider("f_split (Δf, splitting distance) (GHz)", 0.0, 10.0, 0.0, 0.01,
+                        help="Splitting distance between Lorentzian peaks. Used to calculate phi_a = π * (f_split / FSR_ring)")
+    f_FSRring = st.slider("FSR_ring (GHz)", 1.0, 100.0, 10.0, 0.1,
+                        help="Free spectral range of the ring")
+    f_FSRfp = st.slider("FSR_fp (GHz)", 1.0, 100.0, 10.0, 0.1,
+                        help="Free spectral range of the Fabry-Pérot cavity")
     
     # Facet parameters
     st.markdown("### Facet Parameters")
-    r = st.slider("r (Facet reflectivity)", 0.0, 0.5, 0.1, 0.01)
+    r = st.slider("r (Facet reflectivity)", 0.01, 0.5, 0.01, 0.01)
     t_fp = st.slider("t_fp (Fabry-Pérot transmission)", 0.5, 1.0, 0.9, 0.01)
     
     # Phase parameters
@@ -80,6 +83,7 @@ phi_fp = np.pi * (f_offset / f_FSRfp)
 
 # Calculate transmission amplitude and effective reflectivity
 A_t = IL_t * (1 - r**2)**2 * t_fp**4
+A_r = IL_r * 1 / r**2
 r_e = r * t_fp**2
 
 # Calculate T_full using the simplified equation (line 57)
@@ -88,12 +92,51 @@ r_e = r * t_fp**2
 # denominator = (1 - sigma*a_+)(1 - sigma*a_-) + r_e^2*(sigma - a_+)(sigma - a_-)*e^(i*2*phi_fp) 
 #              - r_e*(1 - sigma^2)*|rho|*e^(i*(phi_r + phi_fp))*2*cos(delta)
 
-numerator = (1 - sigma * a_plus) * (sigma - a_minus) + (1 - sigma * a_minus) * (sigma - a_plus)
-denominator = (1 - sigma * a_plus) * (1 - sigma * a_minus) + \
-              r_e**2 * (sigma - a_plus) * (sigma - a_minus) * np.exp(1j * 2 * phi_fp) - \
-              r_e * (1 - sigma**2) * rho_mag * np.exp(1j * (phi_r + phi_fp)) * 2 * np.cos(delta)
+def T_full_calculation(sigma, a_plus, a_minus, phi_fp, phi_r, delta, r_e, A_t, rho_mag):
+    numerator = (1 - sigma * a_plus) * (sigma - a_minus) + (1 - sigma * a_minus) * (sigma - a_plus)
+    denominator = (1 - sigma * a_plus) * (1 - sigma * a_minus) + \
+                r_e**2 * (sigma - a_plus) * (sigma - a_minus) * np.exp(1j * 2 * phi_fp) - \
+                r_e * (1 - sigma**2) * rho_mag * np.exp(1j * (phi_r + phi_fp)) * 2 * np.cos(delta)
 
-T_full = (A_t / 4) * np.abs(numerator / denominator)**2
+    return (A_t / 4) * np.abs(numerator / denominator)**2
+
+
+def T_fp_calculation(A_t, r_e, phi_fp):
+    numerator = A_t
+    denominator = (1 - r_e**2)**2 + 4 * r_e**2 * np.cos(phi_fp)**2
+    return numerator / denominator
+
+def T_minus_calculation(sigma, a_minus, A_t):
+    numerator = (sigma - a_minus)
+    denominator = (1-sigma*a_minus)
+    return (A_t) * np.abs(numerator / denominator)**2
+
+def T_plus_calculation(sigma, a_plus, A_t):
+    numerator = (sigma - a_plus)
+    denominator = (1-sigma*a_plus)
+    return (A_t) * np.abs(numerator / denominator)**2
+
+
+def R_full_calculation(sigma, a_plus, a_minus, phi_fp, phi_r, delta, r_e, A_r, rho_mag, r):
+    """
+    Calculate full reflection R_full based on the ring resonator with back reflection model.
+    
+    R_full = A_r * |numerator / denominator|^2
+    
+    numerator = r^2(1-σa_+)(1-σa_-) + r_e^2(σ-a_+)(σ-a_-)e^{i2φ_fp} 
+                - r_e(1-σ^2)|ρ|e^{i(φ_r+φ_fp)}(e^{iδ} + r^2 e^{-iδ})
+    denominator = (1-σa_+)(1-σa_-) + r_e^2(σ-a_+)(σ-a_-)e^{i2φ_fp} 
+                  - r_e(1-σ^2)|ρ|e^{i(φ_r+φ_fp)}2cos(δ)
+    """
+    numerator = r**2 * (1 - sigma * a_plus) * (1 - sigma * a_minus) + \
+                r_e**2 * (sigma - a_plus) * (sigma - a_minus) * np.exp(1j * 2 * phi_fp) - \
+                r_e * (1 - sigma**2) * rho_mag * np.exp(1j * (phi_r + phi_fp)) * (np.exp(1j * delta) + r**2 * np.exp(-1j * delta))
+    denominator = (1 - sigma * a_plus) * (1 - sigma * a_minus) + \
+                r_e**2 * (sigma - a_plus) * (sigma - a_minus) * np.exp(1j * 2 * phi_fp) - \
+                r_e * (1 - sigma**2) * rho_mag * np.exp(1j * (phi_r + phi_fp)) * 2 * np.cos(delta)
+
+    return A_r * np.abs(numerator / denominator)**2
+
 
 # Calculate quality factors
 # Delta_omega_FSR = 2*pi*FSR_ring (convert GHz to rad/s)
@@ -125,20 +168,48 @@ if sigma_a > 0 and sigma_a < 1 and sigma > 0 and sigma < 1:
 else:
     eta_esc = np.nan
 
+
+T_full = T_full_calculation(sigma, a_plus, a_minus, phi_fp, phi_r, delta, r_e, A_t, rho_mag)
 # Main content area
 col1, col2 = st.columns([3, 1])
 
 with col1:
     st.subheader("Transmission (T_full)")
-    dB_toggle = st.checkbox("Show in dB", value=False)
+    toggle_cols = st.columns(5)
+    with toggle_cols[0]:
+        dB_toggle = st.checkbox("Show in dB", value=False)
+    with toggle_cols[1]:
+        include_T_fp = st.checkbox("Include Fabry-Pérot", value=False)
+    with toggle_cols[2]:
+        include_T_minus = st.checkbox("Include T_minus", value=False)
+    with toggle_cols[3]:
+        include_T_plus = st.checkbox("Include T_plus", value=False)
+    with toggle_cols[4]:
+        include_R_full = st.checkbox("Include R_full", value=False)
 
     if dB_toggle:
         T_full = 10 * np.log10(T_full)
         yaxis_title = 'Transmission (dB)'
         T_min, T_max = st.slider("Transmission range (dB)", -100.0, 0.0, (-10.0, 0.0), 0.1)
+        if include_T_fp:
+            T_fp = 10 * np.log10(T_fp_calculation(A_t, r_e, phi_fp))
+        if include_T_minus:
+            T_minus = 10 * np.log10(T_minus_calculation(sigma, a_minus, A_t))
+        if include_T_plus:
+            T_plus = 10 * np.log10(T_plus_calculation(sigma, a_plus, A_t))
+        if include_R_full:
+            R_full = 10 * np.log10(R_full_calculation(sigma, a_plus, a_minus, phi_fp, phi_r, delta, r_e, A_r, rho_mag, r))
     else:
         yaxis_title = 'Transmission (linear)'
-        T_min, T_max = st.slider("Transmission range", 0.0, 1.0, (0.0, 1.0), 0.01)
+        T_min, T_max = st.slider("Transmission range", 0.0, 1.1, (0.0, 1.1), 0.01)
+        if include_T_fp:
+            T_fp = T_fp_calculation(A_t, r_e, phi_fp)
+        if include_T_minus:
+            T_minus = T_minus_calculation(sigma, a_minus, A_t)
+        if include_T_plus:
+            T_plus = T_plus_calculation(sigma, a_plus, A_t)
+        if include_R_full:
+            R_full = R_full_calculation(sigma, a_plus, a_minus, phi_fp, phi_r, delta, r_e, A_r, rho_mag, r)
     # Create Plotly figure
     fig = go.Figure()
     fig.add_trace(go.Scatter(
@@ -146,9 +217,40 @@ with col1:
         y=T_full,
         mode='lines',
         line=dict(color='blue', width=2),
-        name='T_full'
+        name='Ring + Fabry-Pérot'
     ))
-    
+    if include_T_fp:
+        fig.add_trace(go.Scatter(
+            x=f_offset,
+            y=T_fp,
+            mode='lines',
+            line=dict(color='red', width=2),
+            name='Fabry-Pérot'
+        ))
+    if include_T_minus:
+        fig.add_trace(go.Scatter(
+            x=f_offset,
+            y=T_minus,
+            mode='lines',
+            line=dict(color='green', width=2, dash='dash'),
+            name='T_minus'
+        ))
+    if include_T_plus:
+        fig.add_trace(go.Scatter(
+            x=f_offset,
+            y=T_plus,
+            mode='lines',
+            line=dict(color='orange', width=2, dash='dash'),
+            name='T_plus'
+        ))
+    if include_R_full:
+        fig.add_trace(go.Scatter(
+            x=f_offset,
+            y=R_full,
+            mode='lines',
+            line=dict(color='purple', width=2),
+            name='Back Reflection'
+        ))
     fig.update_traces(
         hovertemplate='Frequency offset: %{x:.3f} GHz<br>Transmission: %{y:.6f}<extra></extra>'
     )
@@ -211,11 +313,13 @@ with st.expander("Model Information", expanded=False):
     This model implements the **Ring Resonator With Back Reflection** transmission model.
     
     **Key Equations:**
-    - Transmission: $T_{full} = \\frac{A_t}{4} \\left| \\frac{\\text{numerator}}{\\text{denominator}} \\right|^2$ 
-    - Quality Factors: $Q_{load, m} = \\frac{\\omega_m}{\\Delta\\omega_{FSR}} \\frac{\\pi}{\\ln(\\sigma a)}$
-    - Quality Factors: $Q_{ext, m} = \\frac{\\omega_m}{\\Delta\\omega_{FSR}} \\frac{\\pi}{\\ln(\\sigma)}$
-    - Quality Factors: $Q_{int, m} = \\frac{\\omega_m}{\\Delta\\omega_{FSR}} \\frac{\\pi}{\\ln(a)}$
-    - Escape Efficiency: $\\eta_{esc} = \\frac{\\ln(\\sigma)}{\\ln(\\sigma a)}$
+    - $T_{full} = \\frac{A_t}{4} \\left| \\frac{\\text{numerator}}{\\text{denominator}} \\right|^2$ 
+    - $Q_{load, m} = \\frac{\\omega_m}{\\Delta\\omega_{FSR}} \\frac{\\pi}{\\ln(\\sigma a)}$
+    - $Q_{ext, m} = \\frac{\\omega_m}{\\Delta\\omega_{FSR}} \\frac{\\pi}{\\ln(\\sigma)}$
+    - $Q_{int, m} = \\frac{\\omega_m}{\\Delta\\omega_{FSR}} \\frac{\\pi}{\\ln(a)}$
+    - $\\eta_{esc} = \\frac{\\ln(\\sigma)}{\\ln(\\sigma a)}$
+    - $A_r = IL_r / r^2$
+    - $A_t = IL_t (1-r^2)^2 t_fp^4$
 
     **Parameters:**
     - **$a$**: Ring transmission magnitude ($|a_{\pm}| = \\sqrt{\\tau^2 + |\\rho|^2}$)
@@ -226,6 +330,8 @@ with st.expander("Model Information", expanded=False):
     - **$r$**: Facet reflectivity
     - **$t_{fp}$**: Fabry-Pérot transmission coefficient
     - **$\delta$**: Phase difference ($\phi_d + \phi_e$)
+    - **$IL_t$**: Transmission insertion loss
+    - **$IL_r$**: Reflection insertion loss
     """
     )
 
