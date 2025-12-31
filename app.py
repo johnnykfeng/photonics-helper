@@ -18,7 +18,7 @@ pg = st.navigation([
     ring_resonator_page,
     about_page])
 
-st.set_page_config(page_title="Photonics Calculator", page_icon="🔬", layout="wide")
+st.set_page_config(page_title="Photonics Calculator", page_icon="🔬")
 
 pg.run()
 

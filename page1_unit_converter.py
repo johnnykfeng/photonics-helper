@@ -9,11 +9,9 @@ from equations import (
     percent_to_dB,
     mW_to_dBm,
     dBm_to_mW,
-    # linewidth_GHz_to_nm,
-    # linewidth_nm_to_GHz,
-    # frequency_vs_wavelength,
-    # transmission_plot
 )
+
+st.set_page_config(page_title="Unit Converter", page_icon="🔢", layout="centered")
 
 with open("defaults.toml", "rb") as f:
     defaults = tomllib.load(f)
