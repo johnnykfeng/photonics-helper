@@ -324,7 +324,7 @@ with st.expander("Model Information", expanded=False):
     **Parameters:**
     - **$a$**: Ring transmission magnitude ($|a_{\pm}| = \\sqrt{\\tau^2 + |\\rho|^2}$)
     - **$\sigma$**: Coupler transmission coefficient
-    - **$f_{split}$**: Splitting distance ($\Delta f$) between Lorentzian peaks, used to calculate $\phi_a = \\pi \\times (f_{split} / FSR_{ring})$
+    - **$f_{split}$**: Splitting distance ($\Delta f$) between Lorentzian peaks, used to calculate $\\phi_a = \\pi \\times (f_{split} / FSR_{ring})$
     - **$FSR_{ring}$**: Free spectral range of the ring
     - **$FSR_{fp}$**: Free spectral range of the Fabry-Pérot cavity
     - **$r$**: Facet reflectivity
