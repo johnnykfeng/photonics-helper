@@ -19,12 +19,12 @@ with cols[1]:
 # Sidebar for parameter sliders
 with st.sidebar:
     st.subheader("Model Parameters")
-    
+
     # Ring parameters
     st.markdown("### Ring Parameters")
     a = st.slider("$a$ (Ring transmission magnitude)", 0.50, 1.00, 0.950, 0.001, format="%.3f")
     sigma = st.slider("$\\sigma$ (Coupler transmission coefficient)", 0.50, 1.00, 0.900, 0.001, format="%.3f")
-    
+
     # Frequency parameters
     st.markdown("### Frequency Parameters")
     number_of_points = st.number_input("Number of points", value=10000, step=1)
@@ -39,16 +39,16 @@ with st.sidebar:
                         help="Free spectral range of the ring")
     f_FSRfp = st.slider("FSR_fp (GHz)", 1.0, 100.0, 10.0, 0.1,
                         help="Free spectral range of the Fabry-Pérot cavity")
-    
+
     # Facet parameters
     st.markdown("### Facet Parameters")
     r = st.slider("r (Facet reflectivity)", 0.01, 0.5, 0.01, 0.01)
     t_fp = st.slider("t_fp (Fabry-Pérot transmission)", 0.5, 1.0, 0.9, 0.01)
-    
+
     # Phase parameters
     st.markdown("### Phase Parameters")
     delta = st.slider("δ (Phase difference)", 0.0, 2.0 * np.pi, 0.0, 0.1)
-    
+
     # Insertion loss parameters
     st.markdown("### Insertion Loss")
     IL_t = st.slider("IL_t (Transmission insertion loss)", 0.5, 1.0, 1.0, 0.01)
@@ -89,7 +89,7 @@ r_e = r * t_fp**2
 # Calculate T_full using the simplified equation (line 57)
 # T_full = (A_t/4) * |numerator/denominator|^2
 # numerator = (1 - sigma*a_+)(sigma - a_-) + (1 - sigma*a_-)(sigma - a_+)
-# denominator = (1 - sigma*a_+)(1 - sigma*a_-) + r_e^2*(sigma - a_+)(sigma - a_-)*e^(i*2*phi_fp) 
+# denominator = (1 - sigma*a_+)(1 - sigma*a_-) + r_e^2*(sigma - a_+)(sigma - a_-)*e^(i*2*phi_fp)
 #              - r_e*(1 - sigma^2)*|rho|*e^(i*(phi_r + phi_fp))*2*cos(delta)
 
 def T_full_calculation(sigma, a_plus, a_minus, phi_fp, phi_r, delta, r_e, A_t, rho_mag):
@@ -120,12 +120,12 @@ def T_plus_calculation(sigma, a_plus, A_t):
 def R_full_calculation(sigma, a_plus, a_minus, phi_fp, phi_r, delta, r_e, A_r, rho_mag, r):
     """
     Calculate full reflection R_full based on the ring resonator with back reflection model.
-    
+
     R_full = A_r * |numerator / denominator|^2
-    
-    numerator = r^2(1-σa_+)(1-σa_-) + r_e^2(σ-a_+)(σ-a_-)e^{i2φ_fp} 
+
+    numerator = r^2(1-σa_+)(1-σa_-) + r_e^2(σ-a_+)(σ-a_-)e^{i2φ_fp}
                 - r_e(1-σ^2)|ρ|e^{i(φ_r+φ_fp)}(e^{iδ} + r^2 e^{-iδ})
-    denominator = (1-σa_+)(1-σa_-) + r_e^2(σ-a_+)(σ-a_-)e^{i2φ_fp} 
+    denominator = (1-σa_+)(1-σa_-) + r_e^2(σ-a_+)(σ-a_-)e^{i2φ_fp}
                   - r_e(1-σ^2)|ρ|e^{i(φ_r+φ_fp)}2cos(δ)
     """
     numerator = r**2 * (1 - sigma * a_plus) * (1 - sigma * a_minus) + \
@@ -254,7 +254,7 @@ with col1:
     fig.update_traces(
         hovertemplate='Frequency offset: %{x:.3f} GHz<br>Transmission: %{y:.6f}<extra></extra>'
     )
-    
+
     fig.update_layout(
         title='Transmission vs Frequency Offset',
         xaxis_title='Frequency Offset (f - f₀) [GHz]',
@@ -266,8 +266,8 @@ with col1:
         yaxis_range=[T_min, T_max],
         # legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
-    
-    st.plotly_chart(fig, use_container_width=True)
+
+    st.plotly_chart(fig, width='stretch')
 
 with col2:
     st.subheader("Quality Factors")
@@ -275,17 +275,17 @@ with col2:
         st.metric("Loaded Q", f"{Q_load/1e6:.2f} M", help="Q_load = -ω_m/(Δω_FSR) * π/ln(σa)")
     else:
         st.write("Loaded Q: Invalid (check parameters)")
-    
+
     if not np.isnan(Q_ext):
         st.metric("Extrinsic Q", f"{Q_ext/1e6:.2f} M", help="Q_ext = -ω_m/(Δω_FSR) * π/ln(σ)")
     else:
         st.write("Extrinsic Q: Invalid (check parameters)")
-    
+
     if not np.isnan(Q_int):
         st.metric("Intrinsic Q", f"{Q_int/1e6:.2f} M", help="Q_int = -ω_m/(Δω_FSR) * π/ln(a)")
     else:
         st.write("Intrinsic Q: Invalid (check parameters)")
-    
+
     st.subheader("Escape Efficiency")
     if not np.isnan(eta_esc):
         st.metric("$\\eta_{esc}$", f"{eta_esc:.4f}", help="$\\eta_{esc} = ln(\\sigma)/ln(\\sigma a)$")
@@ -298,7 +298,7 @@ with col2:
         st.metric("Coupling Condition", "Overcoupled")
     else:
         st.metric("Coupling Condition", "Undercoupled")
-    
+
 
 st.subheader("Additional Parameters")
 st.write(f"**$\\tau$:** {tau:.4f}")
@@ -311,9 +311,9 @@ st.write(f"**$r_e$:** {r_e:.4f}")
 with st.expander("Model Information", expanded=False):
     st.markdown("""
     This model implements the **Ring Resonator With Back Reflection** transmission model.
-    
+
     **Key Equations:**
-    - $T_{full} = \\frac{A_t}{4} \\left| \\frac{\\text{numerator}}{\\text{denominator}} \\right|^2$ 
+    - $T_{full} = \\frac{A_t}{4} \\left| \\frac{\\text{numerator}}{\\text{denominator}} \\right|^2$
     - $Q_{load, m} = \\frac{\\omega_m}{\\Delta\\omega_{FSR}} \\frac{\\pi}{\\ln(\\sigma a)}$
     - $Q_{ext, m} = \\frac{\\omega_m}{\\Delta\\omega_{FSR}} \\frac{\\pi}{\\ln(\\sigma)}$
     - $Q_{int, m} = \\frac{\\omega_m}{\\Delta\\omega_{FSR}} \\frac{\\pi}{\\ln(a)}$
