@@ -195,10 +195,10 @@ if run:
         plt.close(fig)
 
     components.html(
-        html,
+        f'<div style="background-color: white;">{html}</div>',
         height=1500,
         scrolling=True
-        )
+    )
 else:
     st.info("Adjust parameters in the sidebar, then click **Run simulation**.")
 
