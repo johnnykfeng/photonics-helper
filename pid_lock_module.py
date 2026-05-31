@@ -1,4 +1,3 @@
-
 import numpy as np
 
 
@@ -9,6 +8,28 @@ def cavity_transmission(f, cavity_center, cavity_fwhm, cavity_port):
         return 1.0 - lorentzian
     return lorentzian
 
+def animate_s_curve(p):
+
+    f_sweep = np.linspace(-20, 20, 600)
+
+    t_fast = np.linspace(0, 5/p['dither_freq'], 500)
+
+    error_signal = np.zeros_like(f_sweep)
+    for i, f in enumerate(f_sweep):
+        omega = 2 * np.pi * p["dither_freq"]
+        dither = np.sin(omega*t_fast)
+        f_inst = f + p['dither_amp']*dither
+        pd_signal = cavity_transmission(
+            f_inst, p['cavity_center'], p['cavity_fwhm'], p['cavity_port']
+        )
+        mixed = pd_signal * dither
+        error_signal[i] = np.mean(mixed)
+
+    # error_signal = error_signal / np.max(np.abs(error_signal))
+
+    return f_sweep, t_fast, error_signal
+
+# q
 
 def create_simulation(p):
     """Run the dither-lock servo simulation, returning the time traces."""

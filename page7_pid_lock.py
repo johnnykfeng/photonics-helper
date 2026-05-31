@@ -17,10 +17,125 @@ import numpy as np
 import streamlit as st
 import streamlit.components.v1 as components
 from matplotlib.animation import FuncAnimation
-from pid_lock_module import cavity_transmission, create_simulation
+from pid_lock_module import cavity_transmission, create_simulation, animate_s_curve
 
 # Allow large inline animations to be embedded as HTML/JS.
 plt.rcParams["animation.embed_limit"] = 200  # MB
+
+
+def build_s_curve_animation(p):
+    f_sweep, t_fast, error_signal = animate_s_curve(p)
+    transmission_curve = cavity_transmission(
+                f_sweep, p['cavity_center'], p['cavity_fwhm'], p['cavity_port']
+            )
+    fig, (ax_top, ax_mid, ax_bot) = plt.subplots(3, 1, figsize=(10, 11))
+    fig.suptitle("Animation of dither signal through a resonance.")
+    # fig.subplots_adjust(hspace=0.45)
+
+    # Top panel: cavity peak + current dithered laser
+    ax_top.plot(f_sweep, transmission_curve, color='black', lw=2,
+                label='Cavity Transmission (0 slope at peak)')
+    dither_span = ax_top.axvspan(0, 0, color='green', alpha=0.15,
+                                 label='Dither excursion')
+    (laser_pt,) = ax_top.plot([], [], 'o', color='green', ms=10,
+                              label='Laser frequency')
+    laser_line = ax_top.axvline(p['cavity_center'], color='green', ls='--', alpha=0.6)
+    ax_top.axvline(0, color='gray', linestyle='--', alpha=0.3)
+    ax_top.axvline(p['cavity_center'], color='blue', linestyle='--', alpha=0.3)
+    ax_top.set_ylabel("Transmission")
+    ax_top.set_xlim(f_sweep[0], f_sweep[-1])
+    ax_top.set_ylim(-0.05, 1.1)
+    ax_top.legend(loc='upper right')
+    ax_top.grid(True, alpha=0.3)
+
+    # Middle panel: instantaneous PD signal and mixer output at each sweep step
+    t_ms = t_fast * 1e3
+    omega = 2 * np.pi * p["dither_freq"]
+    dither_ref = np.sin(omega * t_fast)
+    (dither_line,) = ax_mid.plot(
+        [],
+        [],
+        color="gray",
+        lw=1.5,
+        ls="--",
+        alpha=0.45,
+        label="dither(t) reference",
+    )
+    (pd_line,) = ax_mid.plot([], [], color='blue', lw=1.8, label='pd_signal(t)')
+    (mixed_line,) = ax_mid.plot([], [], color='purple', lw=1.8, label='mixed(t)')
+    (error_signal_line,) = ax_mid.plot([], [], color='red', lw=1.8, ls='--', label='error_signal')
+    ax_mid.axhline(0, color='gray', linestyle='--', alpha=0.4)
+    ax_mid.set_xlabel("Fast Time (ms)")
+    ax_mid.set_ylabel("Amplitude")
+    ax_mid.set_xlim(t_ms[0], t_ms[-1])
+    ax_mid.set_ylim(-1.1, 1.1)
+    ax_mid.legend(loc='upper right')
+    ax_mid.grid(True, alpha=0.3)
+
+    # Bottom panel: error signal S-curve building up
+    (error_curve,) = ax_bot.plot([], [], color='red', lw=2,
+                                 label='error_signal (Demodulated S-Curve)')
+    (error_pt,) = ax_bot.plot([], [], 'o', color='red', ms=8)
+    ax_bot.axvline(p['cavity_center'], color='blue', linestyle='--', alpha=0.5)
+    ax_bot.axvline(0, color='gray', linestyle='--', alpha=0.5)
+    ax_bot.axhline(0, color='gray', linestyle='--', alpha=0.5)
+    ax_bot.set_xlabel("Laser Frequency Detuning (MHz)")
+    ax_bot.set_ylabel("Normalized Error Signal")
+    ax_bot.set_xlim(f_sweep[0], f_sweep[-1])
+    ax_bot.set_ylim(min(error_signal)*1.1, max(error_signal)*1.1)
+    ax_bot.legend(loc='upper right')
+    ax_bot.grid(True, alpha=0.3)
+
+    fig.tight_layout()
+
+    # Animate by stepping through f_sweep (subsample for a snappier playback)
+    frames = range(0, len(f_sweep), 4)
+
+    def update(i):
+        f = f_sweep[i]
+        f_inst = f + p['dither_amp'] * dither_ref
+        pd_signal = cavity_transmission(
+            f_inst, p['cavity_center'], p['cavity_fwhm'], p['cavity_port']
+        )
+        mixed = pd_signal * dither_ref
+
+        # Current dither excursion drawn as a shaded band around f
+        lo, hi = f - p['dither_amp'] , f + p['dither_amp']
+        dither_span.set_x(lo)
+        dither_span.set_width(hi - lo)
+        laser_line.set_xdata([f, f])
+        laser_pt.set_data([f], [cavity_transmission(
+            f, p['cavity_center'], p['cavity_fwhm'], p['cavity_port']
+        )])
+
+        # Time-domain signals for this frame
+        dither_line.set_data(t_ms, dither_ref)
+        pd_line.set_data(t_ms, pd_signal)
+        mixed_line.set_data(t_ms, mixed)
+        error_signal_line.set_data(t_ms, np.ones(len(t_ms))*error_signal[i])
+        # ax_mid.axhline(y=error_signal[i], color ='red', linestyle='--', label = "error_signal")
+        ax_mid.set_title(f"Instantaneous Signals at Detuning f = {f:.2f} MHz")
+
+        # Error signal accumulated up to the current frequency
+        error_curve.set_data(f_sweep[:i + 1], error_signal[:i + 1])
+        error_pt.set_data([f], [error_signal[i]])
+        return (
+            dither_span,
+            laser_line,
+            laser_pt,
+            dither_line,
+            pd_line,
+            mixed_line,
+            error_curve,
+            error_pt,
+        )
+
+    # anim = FuncAnimation(fig, update, frames=frames, interval=30, blit=False)
+
+    anim = FuncAnimation(
+        fig, update, frames=frames, interval=1000 / p["fps"], blit=False
+    )
+    return fig, anim
 
 
 def build_animation(p):
@@ -59,7 +174,9 @@ def build_animation(p):
     (locked_curve,) = ax_mid.plot([], [], color="green", lw=2, label="Laser Frequency (Servo)")
     (locked_pt,) = ax_mid.plot([], [], "o", color="green", ms=8)
     ax_mid.axhline(p["cavity_center"], color="black", linestyle="-", lw=1, label="Target Cavity Peak")
-    ax_mid.axvline(p["lock_on_time"] * 1e3, color="red", linestyle="--", label="Servo ON")
+    # ax_mid.axvline(p["lock_on_time"] * 1e3, color="red", linestyle="--", label="Servo ON")
+    ax_mid.axvspan(xmin=p["lock_on_time"] * 1e3, xmax=t_ms[-1], color="gold", alpha=0.2, label="Servo ON")
+
     ax_mid.set_xlabel("Time (ms)")
     ax_mid.set_ylabel("Laser Frequency (MHz)")
     ax_mid.set_xlim(t_ms[0], t_ms[-1])
@@ -71,11 +188,11 @@ def build_animation(p):
 
     # Bottom panel: filtered (demodulated) error signal vs time.
     (error_curve,) = ax_bot.plot(
-        [], [], color="purple", lw=2, label="filtered_error (servo input)"
+        [], [], color="red", lw=2, label="filtered_error (servo input)"
     )
-    (error_pt,) = ax_bot.plot([], [], "o", color="purple", ms=8)
+    (error_pt,) = ax_bot.plot([], [], "o", color="red", ms=8)
     ax_bot.axhline(0, color="gray", linestyle="--", alpha=0.5)
-    ax_bot.axvline(p["lock_on_time"] * 1e3, color="red", linestyle="--", label="Servo ON")
+    ax_bot.axvspan(xmin=p["lock_on_time"] * 1e3, xmax=max(t_ms), color="gold", alpha=0.2, label="Servo ON")
     ax_bot.set_xlabel("Time (ms)")
     ax_bot.set_ylabel("Filtered Error Signal")
     ax_bot.set_xlim(t_ms[0], t_ms[-1])
@@ -166,9 +283,6 @@ with st.sidebar:
     )
     fps = st.number_input("Playback FPS", value=20, min_value=1, max_value=60, step=1)
 
-run = st.button("Create simulation", type="primary")
-
-if run:
     params = {
         "cavity_center": cavity_center,
         "cavity_fwhm": cavity_fwhm,
@@ -189,6 +303,13 @@ if run:
         "fps": int(fps),
     }
 
+
+simulate_dither_lock_btn = st.button("Simulate dither-locking", type="primary")
+create_s_curve_anim_btn = st.button("Animate signal s-curve", type="primary")
+simulate_all_btn = st.button("Simulate all", type="primary")
+
+if simulate_dither_lock_btn or simulate_all_btn:
+
     with st.spinner("Running simulation and rendering animation..."):
         fig, anim = build_animation(params)
         html = anim.to_jshtml()
@@ -196,11 +317,27 @@ if run:
 
     components.html(
         f'<div style="background-color: white;">{html}</div>',
-        height=1500,
+        height=1200,
         scrolling=True
     )
-else:
-    st.info("Adjust parameters in the sidebar, then click **Run simulation**.")
+# else:
+#     st.info("Adjust parameters in the sidebar, then click **Simulate dither-locking**.")
+
+
+if create_s_curve_anim_btn or simulate_all_btn:
+
+    with st.spinner("Running simulation and rendering animation..."):
+        fig, anim = build_s_curve_animation(params)
+        html = anim.to_jshtml()
+        plt.close(fig)
+
+    components.html(
+        f'<div style="background-color: white;">{html}</div>',
+        height=1200,
+        scrolling=True
+    )
+# else:
+#     st.info("Adjust parameters in the sidebar, then click **Animate dither s-curve**.")
 
 st.divider()
 
