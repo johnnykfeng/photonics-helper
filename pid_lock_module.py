@@ -1,0 +1,64 @@
+
+import numpy as np
+
+
+def cavity_transmission(f, cavity_center, cavity_fwhm, cavity_port):
+    """Models the reference cavity as a Lorentzian resonance peak."""
+    lorentzian = 1.0 / (1.0 + (2.0 * (f - cavity_center) / cavity_fwhm) ** 2)
+    if cavity_port == "return":
+        return 1.0 - lorentzian
+    return lorentzian
+
+
+def create_simulation(p):
+    """Run the dither-lock servo simulation, returning the time traces."""
+    np.random.seed(p["seed"])
+
+    dt = p["dt"]
+    t = np.arange(0, p["t_total"], dt)
+
+    omega = 2 * np.pi * p["dither_freq"]
+
+    # Simulate an unlocked drifting laser (random walk + linear drift).
+    f_free_running = (
+        p["drift_offset"]
+        + p["drift_slope"] * t
+        + np.cumsum(np.random.normal(0, p["noise_amp"], len(t)))
+    )
+
+    f_locked = np.zeros_like(t)
+    filtered_error_hist = np.zeros_like(t)
+    f_current = f_free_running[0]
+    integral_error = 0.0
+    filtered_error = 0.0
+
+    for i in range(len(t)):
+        if i > 0:
+            f_current += f_free_running[i] - f_free_running[i - 1]
+
+        # Apply physical dither.
+        dither_val = p["dither_amp"] * np.sin(omega * t[i])
+        f_inst = f_current + dither_val
+
+        # Photodetector and demodulation (mixer).
+        pd_signal = cavity_transmission(
+            f_inst, p["cavity_center"], p["cavity_fwhm"], p["cavity_port"]
+        )
+        mixed_signal = pd_signal * np.sin(omega * t[i])
+
+        # Low-pass filter (RC filter simulation).
+        filtered_error = (1 - p["lpf_alpha"]) * filtered_error + p["lpf_alpha"] * mixed_signal
+
+        # PID controller.
+        if t[i] >= p["lock_on_time"]:
+            integral_error += filtered_error * dt
+            correction = (p["Kp"] * filtered_error) + (p["Ki"] * integral_error)
+            if p["cavity_port"] == "return":
+                f_current -= correction
+            else:
+                f_current += correction
+
+        f_locked[i] = f_current
+        filtered_error_hist[i] = filtered_error
+
+    return t, f_free_running, f_locked, filtered_error_hist
