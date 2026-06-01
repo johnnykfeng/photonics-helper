@@ -144,7 +144,7 @@ def build_animation(p):
     t_ms = t * 1e3
 
     fig, (ax_top, ax_mid, ax_bot) = plt.subplots(3, 1, figsize=(10, 11))
-    fig.suptitle("PID servo locking the laser to the cavity")
+    fig.suptitle("PID locking the laser to the cavity")
     fig.subplots_adjust(bottom=0.07, hspace=0.35)
 
     # Top panel: cavity peak + current laser position homing onto resonance.
@@ -171,11 +171,11 @@ def build_animation(p):
     (free_curve,) = ax_mid.plot(
         [], [], color="gray", linestyle=":", lw=2, label="Unlocked Laser (Drifting)"
     )
-    (locked_curve,) = ax_mid.plot([], [], color="green", lw=2, label="Laser Frequency (Servo)")
+    (locked_curve,) = ax_mid.plot([], [], color="green", lw=2, label="Laser Frequency")
     (locked_pt,) = ax_mid.plot([], [], "o", color="green", ms=8)
     ax_mid.axhline(p["cavity_center"], color="black", linestyle="-", lw=1, label="Target Cavity Peak")
-    # ax_mid.axvline(p["lock_on_time"] * 1e3, color="red", linestyle="--", label="Servo ON")
-    ax_mid.axvspan(xmin=p["lock_on_time"] * 1e3, xmax=t_ms[-1], color="gold", alpha=0.2, label="Servo ON")
+    # ax_mid.axvline(p["lock_on_time"] * 1e3, color="red", linestyle="--", label="PID ON")
+    ax_mid.axvspan(xmin=p["lock_on_time"] * 1e3, xmax=t_ms[-1], color="gold", alpha=0.2, label="PID ON")
 
     ax_mid.set_xlabel("Time (ms)")
     ax_mid.set_ylabel("Laser Frequency (MHz)")
@@ -188,11 +188,11 @@ def build_animation(p):
 
     # Bottom panel: filtered (demodulated) error signal vs time.
     (error_curve,) = ax_bot.plot(
-        [], [], color="red", lw=2, label="filtered_error (servo input)"
+        [], [], color="red", lw=2, label="filtered_error (PID input)"
     )
     (error_pt,) = ax_bot.plot([], [], "o", color="red", ms=8)
     ax_bot.axhline(0, color="gray", linestyle="--", alpha=0.5)
-    ax_bot.axvspan(xmin=p["lock_on_time"] * 1e3, xmax=max(t_ms), color="gold", alpha=0.2, label="Servo ON")
+    ax_bot.axvspan(xmin=p["lock_on_time"] * 1e3, xmax=max(t_ms), color="gold", alpha=0.2, label="PID ON")
     ax_bot.set_xlabel("Time (ms)")
     ax_bot.set_ylabel("Filtered Error Signal")
     ax_bot.set_xlim(t_ms[0], t_ms[-1])
@@ -216,7 +216,7 @@ def build_animation(p):
         free_curve.set_data(t_ms[: i + 1], f_free_running[: i + 1])
         locked_curve.set_data(t_ms[: i + 1], f_locked[: i + 1])
         locked_pt.set_data([t_ms[i]], [f_locked[i]])
-        ax_mid.set_title(f"Servo Response at t = {t_ms[i]:.2f} ms")
+        ax_mid.set_title(f"PID Response at t = {t_ms[i]:.2f} ms")
 
         error_curve.set_data(t_ms[: i + 1], filtered_error_hist[: i + 1])
         error_pt.set_data([t_ms[i]], [filtered_error_hist[i]])
@@ -244,7 +244,7 @@ st.set_page_config(page_title="PID Dither-Lock Simulator", layout="wide")
 st.title("PID Dither-Lock Simulator")
 st.write(
     "Interactive simulation of a laser frequency locked to a reference cavity "
-    "using dither modulation and a PID servo. Set the parameters and run."
+    "using dither modulation and a PID. Set the parameters and run."
 )
 
 with st.sidebar:
@@ -262,13 +262,14 @@ with st.sidebar:
         "Dither amplitude (fraction of FWHM)", min_value=0.01, max_value=1.0, value=0.2, step=0.01
     )
 
-    st.header("PID servo")
+    st.header("PID")
     Kp = st.number_input("Kp (proportional gain)", value=0.5, step=0.1, format="%.3f")
     Ki = st.number_input("Ki (integral gain)", value=50.0, step=1.0, format="%.3f")
     lpf_alpha = st.slider("LPF alpha (low-pass coeff.)", min_value=0.001, max_value=1.0, value=0.01, step=0.001)
-    lock_on_time_ms = st.number_input("Servo ON time (ms)", value=15.0, min_value=0.0, step=1.0)
+    lock_on_time_ms = st.number_input("PID ON time (ms)", value=10.0, min_value=0.0, step=1.0)
 
     st.header("Laser drift")
+    drift_on = st.checkbox("Noise Drift ON", value=True)
     drift_offset = st.number_input("Initial offset (MHz)", value=10.0, step=1.0)
     drift_slope = st.number_input("Drift slope (MHz/s)", value=50.0, step=5.0)
     noise_amp = st.number_input("Random-walk noise amplitude", value=0.1, min_value=0.0, step=0.05, format="%.3f")
@@ -278,10 +279,10 @@ with st.sidebar:
     t_total_ms = st.number_input("Total time (ms)", value=30.0, min_value=1.0, step=5.0)
     dt_ms = st.number_input("Time step dt (ms)", value=0.01, min_value=0.001, step=0.005, format="%.3f")
     frame_step = st.number_input(
-        "Frame step (subsample)", value=25, min_value=1, step=1,
+        "Frame step (subsample)", value=20, min_value=1, step=1,
         help="Plot every Nth simulation step as an animation frame.",
     )
-    fps = st.number_input("Playback FPS", value=20, min_value=1, max_value=60, step=1)
+    fps = st.number_input("Playback FPS", value=10, min_value=1, max_value=60, step=1)
 
     params = {
         "cavity_center": cavity_center,
@@ -293,6 +294,7 @@ with st.sidebar:
         "Ki": Ki,
         "lpf_alpha": lpf_alpha,
         "lock_on_time": lock_on_time_ms * 1e-3,
+        "drift_on": drift_on,
         "drift_offset": drift_offset,
         "drift_slope": drift_slope,
         "noise_amp": noise_amp,

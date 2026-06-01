@@ -41,11 +41,25 @@ def create_simulation(p):
     omega = 2 * np.pi * p["dither_freq"]
 
     # Simulate an unlocked drifting laser (random walk + linear drift).
-    f_free_running = (
-        p["drift_offset"]
-        + p["drift_slope"] * t
-        + np.cumsum(np.random.normal(0, p["noise_amp"], len(t)))
-    )
+    # If the "drift_on" parameter is True, simulate the free-running (unlocked) laser frequency over time as follows:
+    # - Start at the provided offset ("drift_offset"),
+    # - Add a linear drift with slope "drift_slope",
+    # - Add a random-walk (Brownian motion) noise with standard deviation "noise_amp" at each time step.
+    # - np.cumsum(np.random...) is array with size len(t)
+    # The cumulative sum of random values represents the accumulation of small random deviations over time.
+    if p['drift_on']:
+        f_free_running = (
+            p["drift_offset"]
+            + p["drift_slope"] * t
+            + np.cumsum(np.random.normal(0, p["noise_amp"], len(t)))
+        )
+
+    else:
+        f_free_running = (
+            p['drift_offset']
+            # + p["drift_slope"]*t
+            + np.zeros(len(t))
+            )
 
     f_locked = np.zeros_like(t)
     filtered_error_hist = np.zeros_like(t)
