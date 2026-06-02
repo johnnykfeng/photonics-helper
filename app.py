@@ -9,6 +9,7 @@ tables_page = st.Page("page4_tables.py", title="Tables", icon="📊")
 parquet_loader_page = st.Page("page5_parquet_loader.py", title="Parquet Loader", icon="📋")
 ring_resonator_page = st.Page("page6_ring-resonator-model.py", title="Ring Resonator Model", icon="🔄")
 pid_lock_page = st.Page("page7_pid_lock.py", title="PID Locking Simulation", icon="🖥️")
+page8 = st.Page("page8_searching_lock_parameters.py", title="Searching Lock Parameters", icon="🔍")
 about_page = st.Page("about_page.py", title="About", icon="ℹ️")
 
 pg = st.navigation([
@@ -19,6 +20,7 @@ pg = st.navigation([
     parquet_loader_page,
     ring_resonator_page,
     pid_lock_page,
+    page8,
     about_page])
 
 st.set_page_config(page_title="Photonics Calculator", page_icon="🔬")
