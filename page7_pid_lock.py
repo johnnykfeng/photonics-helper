@@ -61,9 +61,10 @@ def build_s_curve_animation(p):
         alpha=0.45,
         label="dither(t) reference",
     )
+    error_signal_scale = 5
     (pd_line,) = ax_mid.plot([], [], color='blue', lw=1.8, label='pd_signal(t)')
     (mixed_line,) = ax_mid.plot([], [], color='purple', lw=1.8, label='mixed(t)')
-    (error_signal_line,) = ax_mid.plot([], [], color='red', lw=1.8, ls='--', label='error_signal')
+    (error_signal_line,) = ax_mid.plot([], [], color='red', lw=1.8, ls='--', label=f'error_signal (x{error_signal_scale})')
     ax_mid.axhline(0, color='gray', linestyle='--', alpha=0.4)
     ax_mid.set_xlabel("Fast Time (ms)")
     ax_mid.set_ylabel("Amplitude")
@@ -112,7 +113,7 @@ def build_s_curve_animation(p):
         dither_line.set_data(t_ms, dither_ref)
         pd_line.set_data(t_ms, pd_signal)
         mixed_line.set_data(t_ms, mixed)
-        error_signal_line.set_data(t_ms, np.ones(len(t_ms))*error_signal[i])
+        error_signal_line.set_data(t_ms, np.ones(len(t_ms))*error_signal[i]*error_signal_scale) # scale up the error signal for visibility
         # ax_mid.axhline(y=error_signal[i], color ='red', linestyle='--', label = "error_signal")
         ax_mid.set_title(f"Instantaneous Signals at Detuning f = {f:.2f} MHz")
 
