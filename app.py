@@ -1,5 +1,4 @@
 import streamlit as st
-import tomllib
 
 
 unit_converter_page = st.Page("page1_unit_converter.py", title="Unit Converter", icon="🔢")
@@ -28,4 +27,3 @@ pg = st.navigation([
 st.set_page_config(page_title="Photonics Calculator", page_icon="🔬")
 
 pg.run()
-
