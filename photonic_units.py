@@ -95,3 +95,45 @@ class Frequency(BaseModel):
             "THz": 1e12,
         }
         return self.value * unit_factors[self.unit.value]
+
+        # INSERT_YOUR_CODE
+class AngularFrequencyUnit(str, Enum):
+    """Enumeration of permitted angular frequency units (case-insensitive parsing)."""
+    RAD_PER_SEC = "rad/s"
+    KILO_RAD_PER_SEC = "krad/s"
+    MEGA_RAD_PER_SEC = "Mrad/s"
+    GIGA_RAD_PER_SEC = "Grad/s"
+    TERA_RAD_PER_SEC = "Trad/s"
+
+    @classmethod
+    def _missing_(cls, value):
+        """Allow case-insensitive matching for unit strings."""
+        if not isinstance(value, str):
+            return None
+        value_lower = value.lower()
+        for member in cls:
+            if member.value.lower() == value_lower:
+                return member
+        return None
+
+class AngularFrequency(BaseModel):
+    """Model representing an angular frequency with constrained units."""
+    value: float = Field(
+        ...,
+        gt=0,
+        description="The numerical value of the angular frequency (must be strictly positive)."
+    )
+    unit: AngularFrequencyUnit = Field(
+        default=AngularFrequencyUnit.RAD_PER_SEC,
+        description="The unit of measurement for the angular frequency."
+    )
+
+    @property
+    def value_si(self) -> float:
+        """Return the value of the angular frequency in SI units (rad/s)."""
+        unit_factors = {
+            "rad/s": 1,
+            "Trad/s": 1e12,
+        }
+        return self.value * unit_factors[self.unit.value]
+ 

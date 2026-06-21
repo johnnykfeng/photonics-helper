@@ -2,7 +2,14 @@ import unittest
 
 from pydantic import ValidationError
 
-from photonic_units import Frequency, FrequencyUnit, Wavelength, WavelengthUnit
+from photonic_units import (
+    AngularFrequency,
+    AngularFrequencyUnit,
+    Frequency,
+    FrequencyUnit,
+    Wavelength,
+    WavelengthUnit,
+)
 
 
 class TestWavelength(unittest.TestCase):
@@ -55,6 +62,32 @@ class TestFrequency(unittest.TestCase):
     def test_non_positive_value_raises(self):
         with self.assertRaises(ValidationError):
             Frequency(value=0, unit=FrequencyUnit.GIGAHERTZ)
+
+
+class TestAngularFrequency(unittest.TestCase):
+    def test_explicit_unit_enum(self):
+        omega = AngularFrequency(value=1215.0, unit=AngularFrequencyUnit.TERA_RAD_PER_SEC)
+        self.assertEqual(omega.value, 1215.0)
+        self.assertEqual(omega.unit, AngularFrequencyUnit.TERA_RAD_PER_SEC)
+        self.assertAlmostEqual(omega.value_si, 1215.0e12)
+
+    def test_explicit_unit_case_insensitive(self):
+        omega = AngularFrequency(value=2.0, unit="trad/s")
+        self.assertEqual(omega.unit, AngularFrequencyUnit.TERA_RAD_PER_SEC)
+        self.assertAlmostEqual(omega.value_si, 2.0e12)
+
+    def test_default_unit_is_rad_per_sec(self):
+        omega = AngularFrequency(value=1.0)
+        self.assertEqual(omega.unit, AngularFrequencyUnit.RAD_PER_SEC)
+        self.assertAlmostEqual(omega.value_si, 1.0)
+
+    def test_invalid_unit_raises(self):
+        with self.assertRaises(ValidationError):
+            AngularFrequency(value=1215.0, unit="NotAUnit")
+
+    def test_non_positive_value_raises(self):
+        with self.assertRaises(ValidationError):
+            AngularFrequency(value=0, unit=AngularFrequencyUnit.TERA_RAD_PER_SEC)
 
 
 if __name__ == "__main__":
