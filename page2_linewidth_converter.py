@@ -27,10 +27,12 @@ with col1:
         step=0.1,
     )
 
-    linewidth_freq = Frequency(value=linewidth_freq_input, unit=freq_unit)
-    center_wavelength = Wavelength(value=center_wavelength_input, unit=WavelengthUnit.NANOMETER)
+    freq_unit_enum = FrequencyUnit.MEGAHERTZ if freq_unit == "MHz" else FrequencyUnit.GIGAHERTZ
+    freq_factor = 1e6 if freq_unit == "MHz" else 1e9
+    linewidth_freq = Frequency(value_si=linewidth_freq_input * freq_factor, unit=freq_unit_enum)
+    center_wavelength = Wavelength(value_si=center_wavelength_input * 1e-9, unit=WavelengthUnit.NANOMETER)
     linewidth_wvl = linewidth_freq_to_wvl(linewidth_freq, center_wavelength)
-    st.subheader(f"$\\Delta \\lambda$ = {linewidth_wvl.value:.6f} {linewidth_wvl.unit.value}")
+    st.subheader(f"$\\Delta \\lambda$ = {linewidth_wvl.value_unit:.6f} {linewidth_wvl.unit.value}")
 
 
 with col2:
@@ -64,7 +66,7 @@ with col2:
         key="center3",
     )
 
-    linewidth_wvl = Wavelength(value=linewidth_wvl_input, unit=WavelengthUnit.NANOMETER)
-    center_wavelength = Wavelength(value=center_wavelength_input, unit=WavelengthUnit.NANOMETER)
+    linewidth_wvl = Wavelength(value_si=linewidth_wvl_input * 1e-9, unit=WavelengthUnit.NANOMETER)
+    center_wavelength = Wavelength(value_si=center_wavelength_input * 1e-9, unit=WavelengthUnit.NANOMETER)
     linewidth_freq = linewidth_wvl_to_freq(linewidth_wvl, center_wavelength, freq_unit=freq_unit)
-    st.subheader(f"$\\Delta \\nu$ = {linewidth_freq.value:.6f} {linewidth_freq.unit.value}")
+    st.subheader(f"$\\Delta \\nu$ = {linewidth_freq.value_unit:.6f} {linewidth_freq.unit.value}")

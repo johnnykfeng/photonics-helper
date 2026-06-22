@@ -35,10 +35,10 @@ def frequency_to_wavelength(freq):
     """
     return_scalar = not isinstance(freq, Frequency)
     if return_scalar:
-        freq = Frequency(value=freq)
+        freq = Frequency(value_si=freq * 1e9)
     wavelength_m = speed_of_light / freq.value_si
-    result = Wavelength(value=wavelength_m / 1e-9)
-    return result.value if return_scalar else result
+    result = Wavelength(value_si=wavelength_m)
+    return result.value_unit if return_scalar else result
 
 
 def wavelength_to_frequency(wavelength):
@@ -48,10 +48,10 @@ def wavelength_to_frequency(wavelength):
     """
     return_scalar = not isinstance(wavelength, Wavelength)
     if return_scalar:
-        wavelength = Wavelength(value=wavelength)
+        wavelength = Wavelength(value_si=wavelength * 1e-9)
     freq_hz = speed_of_light / wavelength.value_si
-    result = Frequency(value=freq_hz / 1e9)
-    return result.value if return_scalar else result
+    result = Frequency(value_si=freq_hz)
+    return result.value_unit if return_scalar else result
 
 
 def omega_to_wavelength(omega):
@@ -60,9 +60,9 @@ def omega_to_wavelength(omega):
     Accepts an AngularFrequency object or a float in Trad/s. Returns Wavelength.
     """
     if not isinstance(omega, AngularFrequency):
-        omega = AngularFrequency(value=omega, unit=AngularFrequencyUnit.TERA_RAD_PER_SEC)
+        omega = AngularFrequency(value_si=omega * 1e12, unit=AngularFrequencyUnit.TERA_RAD_PER_SEC)
     wavelength_m = 2 * np.pi * speed_of_light / omega.value_si
-    return Wavelength(value=wavelength_m / 1e-9)
+    return Wavelength(value_si=wavelength_m)
 
 
 def wavelength_to_omega(wavelength):
@@ -73,10 +73,10 @@ def wavelength_to_omega(wavelength):
     """
     return_scalar = not isinstance(wavelength, Wavelength)
     if return_scalar:
-        wavelength = Wavelength(value=wavelength)
+        wavelength = Wavelength(value_si=wavelength * 1e-9)
     omega_rad_s = 2 * np.pi * speed_of_light / wavelength.value_si
-    result = AngularFrequency(value=omega_rad_s / 1e12, unit=AngularFrequencyUnit.TERA_RAD_PER_SEC)
-    return result.value if return_scalar else result
+    result = AngularFrequency(value_si=omega_rad_s, unit=AngularFrequencyUnit.TERA_RAD_PER_SEC)
+    return result.value_unit if return_scalar else result
 
 
 def dB_to_percent(dB):
@@ -102,49 +102,44 @@ def dBm_to_mW(dBm):
 def linewidth_GHz_to_nm(linewidth_ghz, center_wavelength):
     """Convert linewidth from GHz to nm."""
     if not isinstance(center_wavelength, Wavelength):
-        center_wavelength = Wavelength(value=center_wavelength)
+        center_wavelength = Wavelength(value_si=center_wavelength * 1e-9)
     center_freq = wavelength_to_frequency(center_wavelength)
+    half_linewidth_hz = linewidth_ghz * 1e9 / 2
     wavelength_high = frequency_to_wavelength(
-        Frequency(value=center_freq.value + linewidth_ghz / 2, unit=center_freq.unit)
+        Frequency(value_si=center_freq.value_si + half_linewidth_hz)
     )
     wavelength_low = frequency_to_wavelength(
-        Frequency(value=center_freq.value - linewidth_ghz / 2, unit=center_freq.unit)
+        Frequency(value_si=center_freq.value_si - half_linewidth_hz)
     )
-    return abs(wavelength_high.value - wavelength_low.value)
+    return abs(wavelength_high.value_unit - wavelength_low.value_unit)
 
 
 def linewidth_nm_to_GHz(linewidth_nm, center_wavelength):
     """Convert linewidth from nm to GHz."""
     if not isinstance(center_wavelength, Wavelength):
-        center_wavelength = Wavelength(value=center_wavelength)
-    half_linewidth = Wavelength(value=linewidth_nm / 2)
+        center_wavelength = Wavelength(value_si=center_wavelength * 1e-9)
+    half_linewidth_si = linewidth_nm * 1e-9 / 2
     freq_high = wavelength_to_frequency(
-        Wavelength(
-            value=center_wavelength.value + half_linewidth.value,
-            unit=center_wavelength.unit,
-        )
+        Wavelength(value_si=center_wavelength.value_si + half_linewidth_si)
     )
     freq_low = wavelength_to_frequency(
-        Wavelength(
-            value=center_wavelength.value - half_linewidth.value,
-            unit=center_wavelength.unit,
-        )
+        Wavelength(value_si=center_wavelength.value_si - half_linewidth_si)
     )
-    return abs(freq_high.value - freq_low.value)
+    return abs(freq_high.value_unit - freq_low.value_unit)
 
 
 def linewidth_wvl_to_freq(linewidth_wvl, center_wavelength, freq_unit=FrequencyUnit.MEGAHERTZ):
     """Convert linewidth from wavelength to frequency."""
     return_scalar = not isinstance(linewidth_wvl, Wavelength)
     if return_scalar:
-        linewidth_wvl = Wavelength(value=linewidth_wvl)
+        linewidth_wvl = Wavelength(value_si=linewidth_wvl * 1e-9)
     if not isinstance(center_wavelength, Wavelength):
-        center_wavelength = Wavelength(value=center_wavelength)
+        center_wavelength = Wavelength(value_si=center_wavelength * 1e-9)
     freq_unit = _parse_frequency_unit(freq_unit)
 
     freq_hz = linewidth_wvl.value_si * speed_of_light / (center_wavelength.value_si ** 2)
-    result = Frequency(value=freq_hz / _FREQ_UNIT_FACTORS[freq_unit], unit=freq_unit)
-    return result.value if return_scalar else result
+    result = Frequency(value_si=freq_hz, unit=freq_unit)
+    return result.value_unit if return_scalar else result
 
 
 def linewidth_freq_to_wvl(linewidth_freq, center_wavelength, freq_unit=FrequencyUnit.MEGAHERTZ):
@@ -152,10 +147,13 @@ def linewidth_freq_to_wvl(linewidth_freq, center_wavelength, freq_unit=Frequency
     return_scalar = not isinstance(linewidth_freq, Frequency)
     freq_unit = _parse_frequency_unit(freq_unit)
     if return_scalar:
-        linewidth_freq = Frequency(value=linewidth_freq, unit=freq_unit)
+        linewidth_freq = Frequency(
+            value_si=linewidth_freq * _FREQ_UNIT_FACTORS[freq_unit],
+            unit=freq_unit,
+        )
     if not isinstance(center_wavelength, Wavelength):
-        center_wavelength = Wavelength(value=center_wavelength)
+        center_wavelength = Wavelength(value_si=center_wavelength * 1e-9)
 
     linewidth_wvl_m = linewidth_freq.value_si * (center_wavelength.value_si ** 2) / speed_of_light
-    result = Wavelength(value=linewidth_wvl_m / 1e-9)
-    return result.value if return_scalar else result
+    result = Wavelength(value_si=linewidth_wvl_m)
+    return result.value_unit if return_scalar else result
