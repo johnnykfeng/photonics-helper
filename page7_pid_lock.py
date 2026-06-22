@@ -4,31 +4,44 @@ Run with:
     streamlit run streamlit_pid_lock.py
 
 The animation is rendered directly in the browser via matplotlib's
-JS-HTML embedding (``anim.to_jshtml``). GIF downloads are generated in
-memory on demand via ``anim.save(..., writer="pillow")``.
+JS-HTML embedding (``anim.to_jshtml``). GIF and MP4 downloads are
+generated in memory on demand via ``anim.save(...)``.
 """
 
 import tempfile
-
-import matplotlib
-
-matplotlib.use("Agg")  # headless backend, no GUI window
-
 import matplotlib.pyplot as plt
 import numpy as np
 import streamlit as st
 import streamlit.components.v1 as components
 from matplotlib.animation import FuncAnimation
 from pid_lock_module import cavity_transmission, create_simulation, animate_s_curve
+import matplotlib
+
+matplotlib.use("Agg")  # headless backend, no GUI window
 
 # Allow large inline animations to be embedded as HTML/JS.
 plt.rcParams["animation.embed_limit"] = 200  # MB
+
+try:
+    import imageio_ffmpeg
+
+    plt.rcParams["animation.ffmpeg_path"] = imageio_ffmpeg.get_ffmpeg_exe()
+except ImportError:
+    pass
 
 
 def animation_to_gif_bytes(anim, fps):
     """Render a FuncAnimation to GIF bytes for st.download_button."""
     with tempfile.NamedTemporaryFile(suffix=".gif") as tmp:
         anim.save(tmp.name, writer="pillow", fps=fps)
+        tmp.seek(0)
+        return tmp.read()
+
+
+def animation_to_mp4_bytes(anim, fps):
+    """Render a FuncAnimation to MP4 bytes for st.download_button."""
+    with tempfile.NamedTemporaryFile(suffix=".mp4") as tmp:
+        anim.save(tmp.name, writer="ffmpeg", fps=fps)
         tmp.seek(0)
         return tmp.read()
 
@@ -404,11 +417,11 @@ create_s_curve_anim_btn = st.button("Animate signal s-curve", type="primary")
 simulate_all_btn = st.button("Simulate all", type="primary")
 
 if simulate_dither_lock_btn or simulate_all_btn:
-
     with st.spinner("Running simulation and rendering animation..."):
         fig, anim = build_animation(params)
         html = anim.to_jshtml()
         dither_lock_gif = animation_to_gif_bytes(anim, params["fps"])
+        dither_lock_mp4 = animation_to_mp4_bytes(anim, params["fps"])
         plt.close(fig)
 
     components.html(
@@ -416,22 +429,31 @@ if simulate_dither_lock_btn or simulate_all_btn:
         height=1200,
         scrolling=True,
     )
-    st.download_button(
-        label="Download dither-lock animation (GIF)",
-        data=dither_lock_gif,
-        file_name="pid_dither_lock.gif",
-        mime="image/gif",
-    )
+    dl_col_gif, dl_col_mp4 = st.columns(2)
+    with dl_col_gif:
+        st.download_button(
+            label="Download dither-lock animation (GIF)",
+            data=dither_lock_gif,
+            file_name="pid_dither_lock.gif",
+            mime="image/gif",
+        )
+    with dl_col_mp4:
+        st.download_button(
+            label="Download dither-lock animation (MP4)",
+            data=dither_lock_mp4,
+            file_name="pid_dither_lock.mp4",
+            mime="video/mp4",
+        )
 # else:
 #     st.info("Adjust parameters in the sidebar, then click **Simulate dither-locking**.")
 
 
 if create_s_curve_anim_btn or simulate_all_btn:
-
     with st.spinner("Running simulation and rendering animation..."):
         fig, anim = build_s_curve_animation(params)
         html = anim.to_jshtml()
         s_curve_gif = animation_to_gif_bytes(anim, params["fps"])
+        s_curve_mp4 = animation_to_mp4_bytes(anim, params["fps"])
         plt.close(fig)
 
     components.html(
@@ -439,14 +461,21 @@ if create_s_curve_anim_btn or simulate_all_btn:
         height=1200,
         scrolling=True,
     )
-    st.download_button(
-        label="Download S-curve animation (GIF)",
-        data=s_curve_gif,
-        file_name="dither_s_curve.gif",
-        mime="image/gif",
-    )
-# else:
-#     st.info("Adjust parameters in the sidebar, then click **Animate dither s-curve**.")
+    dl_col_gif, dl_col_mp4 = st.columns(2)
+    with dl_col_gif:
+        st.download_button(
+            label="Download S-curve animation (GIF)",
+            data=s_curve_gif,
+            file_name="dither_s_curve.gif",
+            mime="image/gif",
+        )
+    with dl_col_mp4:
+        st.download_button(
+            label="Download S-curve animation (MP4)",
+            data=s_curve_mp4,
+            file_name="dither_s_curve.mp4",
+            mime="video/mp4",
+        )
 
 st.divider()
 
