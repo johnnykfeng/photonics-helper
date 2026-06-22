@@ -1,27 +1,92 @@
-from equations import (frequency_to_wavelength, wavelength_to_frequency, mW_to_dBm, dBm_to_mW)
 import streamlit as st
 import pandas as pd
 import numpy as np
 
+from equations import dBm_to_mW, mW_to_dBm
+from photonic_units import (
+    FREQUENCY_UNIT_FACTOR_MAP,
+    FREQUENCY_UNIT_MAP,
+    WAVELENGTH_UNIT_FACTOR_MAP,
+    WAVELENGTH_UNIT_MAP,
+    Frequency,
+    PhotonicUnit,
+    Wavelength,
+)
+
+FREQ_UNITS = ["MHz", "GHz", "THz"]
+WVL_UNITS = ["fm", "pm", "nm", "um"]
+
 st.header("Tables")
 st.divider()
 
-table_choice = st.radio("Select a table", ["Frequency vs Wavelength", "Wavelength vs Frequency", "Power (mW) vs Power (dBm)", "Power (dBm) vs Power (mW)"])
+with st.sidebar:
+    freq_unit = st.radio(
+        "Frequency Unit",
+        FREQ_UNITS,
+        index=2,
+        key="table_freq_unit",
+        horizontal=True,
+    )
+    wavelength_unit = st.radio(
+        "Wavelength Unit",
+        WVL_UNITS,
+        index=2,
+        key="table_wavelength_unit",
+        horizontal=True,
+    )
+
+table_choice = st.radio(
+    "Select a table",
+    [
+        "Frequency vs Wavelength",
+        "Wavelength vs Frequency",
+        "Power (mW) vs Power (dBm)",
+        "Power (dBm) vs Power (mW)",
+    ],
+)
 if table_choice == "Frequency vs Wavelength":
-    min_value = st.number_input("Min Frequency (GHz)", value=100.0)
-    max_value = st.number_input("Max Frequency (GHz)", value=1000.0)
-    step_value = st.number_input("Step (GHz)", value=1.0)
+    min_value = st.number_input(f"Min Frequency ({freq_unit})", value=188.0)
+    max_value = st.number_input(f"Max Frequency ({freq_unit})", value=200.0)
+    step_value = st.number_input(f"Step ({freq_unit})", value=1.0)
     freq_range = np.arange(min_value, max_value, step_value)
-    wavelength_range = [frequency_to_wavelength(f) for f in freq_range]
-    df = pd.DataFrame({'Frequency (GHz)': freq_range, 'Wavelength (nm)': wavelength_range})
+    wavelength_range = []
+    for freq_value in freq_range:
+        pu = PhotonicUnit(
+            frequency=Frequency(
+                value_si=freq_value * FREQUENCY_UNIT_FACTOR_MAP[freq_unit],
+                unit=FREQUENCY_UNIT_MAP[freq_unit],
+            )
+        )
+        pu.wavelength.unit = WAVELENGTH_UNIT_MAP[wavelength_unit]
+        wavelength_range.append(pu.wavelength.value_unit)
+    df = pd.DataFrame(
+        {
+            f"Frequency ({freq_unit})": freq_range,
+            f"Wavelength ({wavelength_unit})": wavelength_range,
+        }
+    )
     st.dataframe(df)
 elif table_choice == "Wavelength vs Frequency":
-    min_value = st.number_input("Min Wavelength (nm)", value=1500.0)
-    max_value = st.number_input("Max Wavelength (nm)", value=1600.0)
-    step_value = st.number_input("Step (nm)", value=1.0)
+    min_value = st.number_input(f"Min Wavelength ({wavelength_unit})", value=1500.0)
+    max_value = st.number_input(f"Max Wavelength ({wavelength_unit})", value=1600.0)
+    step_value = st.number_input(f"Step ({wavelength_unit})", value=1.0)
     wavelength_range = np.arange(min_value, max_value, step_value)
-    freq_range = [wavelength_to_frequency(w) for w in wavelength_range]
-    df = pd.DataFrame({'Wavelength (nm)': wavelength_range, 'Frequency (GHz)': freq_range})
+    freq_range = []
+    for wavelength_value in wavelength_range:
+        pu = PhotonicUnit(
+            wavelength=Wavelength(
+                value_si=wavelength_value * WAVELENGTH_UNIT_FACTOR_MAP[wavelength_unit],
+                unit=WAVELENGTH_UNIT_MAP[wavelength_unit],
+            )
+        )
+        pu.frequency.unit = FREQUENCY_UNIT_MAP[freq_unit]
+        freq_range.append(pu.frequency.value_unit)
+    df = pd.DataFrame(
+        {
+            f"Wavelength ({wavelength_unit})": wavelength_range,
+            f"Frequency ({freq_unit})": freq_range,
+        }
+    )
     st.dataframe(df)
 elif table_choice == "Power (mW) vs Power (dBm)":
     min_value = st.number_input("Min Power (mW)", value=1.0)
@@ -29,7 +94,7 @@ elif table_choice == "Power (mW) vs Power (dBm)":
     step_value = st.number_input("Step (mW)", value=1.0)
     mW_range = np.arange(min_value, max_value, step_value)
     dBm_range = [mW_to_dBm(mW) for mW in mW_range]
-    df = pd.DataFrame({'Power (mW)': mW_range, 'Power (dBm)': dBm_range})
+    df = pd.DataFrame({"Power (mW)": mW_range, "Power (dBm)": dBm_range})
     st.dataframe(df)
 elif table_choice == "Power (dBm) vs Power (mW)":
     min_value = st.number_input("Min Power (dBm)", value=0.0)
@@ -37,5 +102,5 @@ elif table_choice == "Power (dBm) vs Power (mW)":
     step_value = st.number_input("Step (dBm)", value=1.0)
     dBm_range = np.arange(min_value, max_value, step_value)
     mW_range = [dBm_to_mW(dBm) for dBm in dBm_range]
-    df = pd.DataFrame({'Power (dBm)': dBm_range, 'Power (mW)': mW_range})
+    df = pd.DataFrame({"Power (dBm)": dBm_range, "Power (mW)": mW_range})
     st.dataframe(df)
