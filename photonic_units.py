@@ -222,6 +222,40 @@ class PhotonicUnit(BaseModel):
         }
 
 
+FREQUENCY_UNIT_MAP = {
+    "Hz": FrequencyUnit.HERTZ,
+    "kHz": FrequencyUnit.KILOHERTZ,
+    "MHz": FrequencyUnit.MEGAHERTZ,
+    "GHz": FrequencyUnit.GIGAHERTZ,
+    "THz": FrequencyUnit.TERAHERTZ,
+}
+
+FREQUENCY_UNIT_FACTOR_MAP = {
+    "Hz": 1,
+    "kHz": 1e3,
+    "MHz": 1e6,
+    "GHz": 1e9,
+    "THz": 1e12,
+}
+
+WAVELENGTH_UNIT_MAP = {
+    "fm": WavelengthUnit.FEMTOMETER,
+    "pm": WavelengthUnit.PICOMETER,
+    "nm": WavelengthUnit.NANOMETER,
+    "um": WavelengthUnit.MICROMETER,
+    "mm": WavelengthUnit.MILLIMETER,
+    "m": WavelengthUnit.METER,
+}
+
+WAVELENGTH_UNIT_FACTOR_MAP = {
+    "fm": 1e-15,
+    "pm": 1e-12,
+    "nm": 1e-9,
+    "um": 1e-6,
+    "mm": 1e-3,
+    "m": 1,
+}
+
 if __name__ == "__main__":
     # pu = PhotonicUnit(wavelength=Wavelength(value_si=532.0e-9, unit="nm"))
     pu = PhotonicUnit(wavelength=1550e-9)

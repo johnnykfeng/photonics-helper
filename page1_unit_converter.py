@@ -4,20 +4,19 @@ import tomllib
 from equations import (
     dB_to_percent,
     dBm_to_mW,
-    frequency_to_wavelength,
     mW_to_dBm,
-    omega_to_wavelength,
     percent_to_dB,
-    wavelength_to_frequency,
-    wavelength_to_omega,
 )
 from photonic_units import (
-    AngularFrequency,
-    AngularFrequencyUnit,
     Frequency,
-    FrequencyUnit,
     Wavelength,
-    WavelengthUnit,
+    PhotonicUnit,
+    AngularFrequencyUnit,
+    FREQUENCY_UNIT_MAP,
+    FREQUENCY_UNIT_FACTOR_MAP,
+    WAVELENGTH_UNIT_MAP,
+    WAVELENGTH_UNIT_FACTOR_MAP,
+    
 )
 
 st.set_page_config(page_title="Unit Converter", page_icon="🔢", layout="centered")
@@ -27,31 +26,47 @@ with open("defaults.toml", "rb") as f:
 
 st.header("Unit Converter")
 st.divider()
+st.subheader("$f \\leftrightarrow \\lambda$")
+
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("$f \\leftrightarrow \\lambda$")
-    freq_input = st.number_input("Input Frequency (GHz)", value=defaults["frequency"], step=0.1)
-    frequency = Frequency(value_si=freq_input * 1e9, unit=FrequencyUnit.GIGAHERTZ)
-    wavelength = frequency_to_wavelength(frequency)
-    st.info(f"$\\lambda$ = {wavelength.value_unit:.3f} {wavelength.unit.value}")
-
-    wavelength_input = st.number_input("Input Wavelength (nm)", value=defaults["wavelength"], step=0.1)
-    wavelength = Wavelength(value_si=wavelength_input * 1e-9, unit=WavelengthUnit.NANOMETER)
-    frequency = wavelength_to_frequency(wavelength)
-    st.info(f"$f$ = {frequency.value_unit:.3f} {frequency.unit.value}")
+    decimal_places = st.slider("Decimal Places", min_value=0, max_value=6, value=3, step=1)
 
 with col2:
-    st.subheader("$\\omega \\leftrightarrow \\lambda$")
-    omega_input = st.number_input("Angular Frequency (Trad/s)", value=defaults["omega"], step=0.1)
-    omega = AngularFrequency(value_si=omega_input * 1e12, unit=AngularFrequencyUnit.TERA_RAD_PER_SEC)
-    wavelength = omega_to_wavelength(omega)
-    st.info(f"$\\lambda$ = {wavelength.value_unit:.3f} {wavelength.unit.value}")
+    step_size = st.radio("Step Size", ["10.0", "1.0", "0.1", "0.01"], index=2, key="step_size_1", horizontal=True)
+    step_size_map = {
+        "10.0": 10.0,
+        "1.0": 1.0,
+        "0.1": 0.1,
+        "0.01": 0.01,
+    }
+    step_size = float(step_size)
 
-    wavelength_input2 = st.number_input("Wavelength (nm)", value=defaults["wavelength"], step=0.1, key="wavelength2")
-    wavelength = Wavelength(value_si=wavelength_input2 * 1e-9, unit=WavelengthUnit.NANOMETER)
-    omega = wavelength_to_omega(wavelength)
-    st.info(f"$\\omega$ = {omega.value_unit:.3f} {omega.unit.value}")
+with col1:
+    freq_unit = st.radio("Frequency Unit", ["MHz", "GHz", "THz"], index=1, key="freq_unit_1", horizontal=True)
+    freq_input = st.number_input(f"Input Frequency ({freq_unit})", value=defaults["frequency"], step=step_size)
+
+with col2:
+    wavelength_unit = st.radio("Wavelength Unit", ["nm", "um", "mm", "m"], index=0, key="wavelength_unit_1", horizontal=True)
+    wavelength_input = st.number_input(f"Input Wavelength ({wavelength_unit})", value=defaults["wavelength"], step=step_size)
+
+with col1:
+    freq_unit_enum = FREQUENCY_UNIT_MAP[freq_unit]
+    freq_factor = FREQUENCY_UNIT_FACTOR_MAP[freq_unit]
+    pu = PhotonicUnit(frequency=Frequency(value_si=freq_input * freq_factor, unit=freq_unit_enum))
+    pu.wavelength.unit = WAVELENGTH_UNIT_MAP[wavelength_unit]
+    st.subheader(f"$\\lambda$ = {pu.wavelength.value_unit:.{decimal_places}f} {pu.wavelength.unit.value}")
+
+with col2:
+    wavelength_unit_enum = WAVELENGTH_UNIT_MAP[wavelength_unit]
+    wavelength_factor = WAVELENGTH_UNIT_FACTOR_MAP[wavelength_unit]
+    pu = PhotonicUnit(wavelength=Wavelength(value_si=wavelength_input * wavelength_factor, unit=wavelength_unit_enum))
+    pu.frequency.unit = FREQUENCY_UNIT_MAP[freq_unit]
+    pu.angular_frequency.unit = AngularFrequencyUnit.RAD_PER_SEC
+    st.subheader(f"$f$ = {pu.frequency.value_unit:.{decimal_places}f} {pu.frequency.unit.value}")
+    omega_sci = f"{pu.angular_frequency.value_unit:.{decimal_places}e}"
+    st.subheader(f"$\\omega$ = {omega_sci} {pu.angular_frequency.unit.value}")
 
 st.divider()
 col3, col4 = st.columns(2)
@@ -60,18 +75,18 @@ with col3:
     st.subheader("$T[dB] \\leftrightarrow T[\\%]$")
     db_input = st.number_input("$T[dB]$", value=0.0, step=0.1)
     percent = dB_to_percent(db_input)
-    st.info(f"$T$ = {percent:.3f}%")
+    st.subheader(f"$T$ = {percent:.3f}%")
 
     percent_input = st.number_input("$T[\\%]$", value=100.0, step=0.1)
     db = percent_to_dB(percent_input)
-    st.info(f"$T[dB]$ = {db:.3f} dB")
+    st.subheader(f"$T[dB]$ = {db:.3f} dB")
 
 with col4:
     st.subheader("$P[mW] \\leftrightarrow P[dBm]$")
     mw_input = st.number_input("Power (mW)", value=1.0, step=0.1)
     dbm = mW_to_dBm(mw_input)
-    st.info(f"$P[dBm]$ = {dbm:.3f} dBm")
+    st.subheader(f"$P[dBm]$ = {dbm:.3f} dBm")
 
     dbm_input = st.number_input("Power (dBm)", value=0.0, step=0.1)
     mw = dBm_to_mW(dbm_input)
-    st.info(f"$P[mW]$ = {mw:.3f} mW")
+    st.subheader(f"$P[mW]$ = {mw:.3f} mW")
