@@ -28,27 +28,21 @@ st.header("Unit Converter")
 st.divider()
 st.subheader("$f \\leftrightarrow \\lambda$")
 
-col1, col2 = st.columns(2)
-
-with col1:
+with st.sidebar:
     decimal_places = st.slider("Decimal Places", min_value=0, max_value=6, value=3, step=1)
 
-with col2:
     step_size = st.radio("Step Size", ["10.0", "1.0", "0.1", "0.01"], index=2, key="step_size_1", horizontal=True)
-    step_size_map = {
-        "10.0": 10.0,
-        "1.0": 1.0,
-        "0.1": 0.1,
-        "0.01": 0.01,
-    }
     step_size = float(step_size)
+
+col1, col2 = st.columns(2)
+
 
 with col1:
     freq_unit = st.radio("Frequency Unit", ["MHz", "GHz", "THz"], index=1, key="freq_unit_1", horizontal=True)
     freq_input = st.number_input(f"Input Frequency ({freq_unit})", value=defaults["frequency"], step=step_size)
 
 with col2:
-    wavelength_unit = st.radio("Wavelength Unit", ["nm", "um", "mm", "m"], index=0, key="wavelength_unit_1", horizontal=True)
+    wavelength_unit = st.radio("Wavelength Unit", ["fm", "pm", "nm", "um"], index=2, key="wavelength_unit_1", horizontal=True)
     wavelength_input = st.number_input(f"Input Wavelength ({wavelength_unit})", value=defaults["wavelength"], step=step_size)
 
 with col1:
