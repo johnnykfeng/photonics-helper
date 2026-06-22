@@ -2,71 +2,147 @@ import streamlit as st
 import tomllib
 
 from equations import linewidth_freq_to_wvl, linewidth_wvl_to_freq
-from photonic_units import Frequency, FrequencyUnit, Wavelength, WavelengthUnit
+from photonic_units import (
+    Frequency,
+    Wavelength,
+    FREQUENCY_UNIT_MAP,
+    FREQUENCY_UNIT_FACTOR_MAP,
+    WAVELENGTH_UNIT_MAP,
+    WAVELENGTH_UNIT_FACTOR_MAP,
+)
 
 with open("defaults.toml", "rb") as f:
     defaults = tomllib.load(f)
 
-st.header("Linewidth Converter")
+FREQ_UNITS = ["MHz", "GHz", "THz"]
+WVL_UNITS = ["fm", "pm", "nm", "um"]
 
+with st.sidebar:
+    decimal_places = st.slider("Decimal Places", min_value=0, max_value=6, value=6, step=1)
+
+    step_size = st.radio(
+        "Step Size",
+        ["10.0", "1.0", "0.1", "0.01"],
+        index=2,
+        key="step_size_2",
+        horizontal=True,
+    )
+    step_size = float(step_size)
+
+    st.subheader("$\\Delta \\nu \\rightarrow \\Delta \\lambda$")
+    freq_unit = st.radio(
+        "Frequency Unit",
+        FREQ_UNITS,
+        index=1,
+        key="freq_unit_1",
+        horizontal=True,
+    )
+    center_wavelength_unit_1 = st.radio(
+        "Center Wavelength Unit",
+        WVL_UNITS,
+        index=2,
+        key="center_wavelength_unit_1",
+        horizontal=True,
+    )
+    linewidth_wvl_unit_1 = st.radio(
+        "Output Wavelength Unit",
+        WVL_UNITS,
+        index=2,
+        key="linewidth_wvl_unit_1",
+        horizontal=True,
+    )
+
+    st.subheader("$\\Delta \\lambda \\rightarrow \\Delta \\nu$")
+    linewidth_wvl_unit_2 = st.radio(
+        "Linewidth Wavelength Unit",
+        WVL_UNITS,
+        index=2,
+        key="linewidth_wvl_unit_2",
+        horizontal=True,
+    )
+    center_wavelength_unit_2 = st.radio(
+        "Center Wavelength Unit",
+        WVL_UNITS,
+        index=2,
+        key="center_wavelength_unit_2",
+        horizontal=True,
+    )
+    freq_unit_2 = st.radio(
+        "Output Frequency Unit",
+        FREQ_UNITS,
+        index=1,
+        key="freq_unit_2",
+        horizontal=True,
+    )
+
+st.header("Linewidth Converter")
+st.divider()
 
 col1, col2 = st.columns(2)
 
 with col1:
     st.subheader("$\\Delta \\lambda\\ = \\frac{\\lambda_0^2}{c} \\Delta \\nu$")
-    freq_unit = st.radio("Frequency Unit", ["MHz", "GHz"], index=0, key="freq_unit_1")
     linewidth_freq_input = st.number_input(
         f"Linewidth ({freq_unit})",
         value=defaults["linewidth_MHz"],
-        step=0.1,
+        step=step_size,
         key="linewidth_freq",
     )
     center_wavelength_input = st.number_input(
-        "Center Wavelength (nm)",
+        f"Center Wavelength ({center_wavelength_unit_1})",
         value=defaults["wavelength"],
-        step=0.1,
+        step=step_size,
+        key="center_wavelength_1",
     )
 
-    freq_unit_enum = FrequencyUnit.MEGAHERTZ if freq_unit == "MHz" else FrequencyUnit.GIGAHERTZ
-    freq_factor = 1e6 if freq_unit == "MHz" else 1e9
-    linewidth_freq = Frequency(value_si=linewidth_freq_input * freq_factor, unit=freq_unit_enum)
-    center_wavelength = Wavelength(value_si=center_wavelength_input * 1e-9, unit=WavelengthUnit.NANOMETER)
+    freq_unit_enum = FREQUENCY_UNIT_MAP[freq_unit]
+    freq_factor = FREQUENCY_UNIT_FACTOR_MAP[freq_unit]
+    center_wavelength_factor = WAVELENGTH_UNIT_FACTOR_MAP[center_wavelength_unit_1]
+    linewidth_freq = Frequency(
+        value_si=linewidth_freq_input * freq_factor,
+        unit=freq_unit_enum,
+    )
+    center_wavelength = Wavelength(
+        value_si=center_wavelength_input * center_wavelength_factor,
+        unit=WAVELENGTH_UNIT_MAP[center_wavelength_unit_1],
+    )
     linewidth_wvl = linewidth_freq_to_wvl(linewidth_freq, center_wavelength)
-    st.subheader(f"$\\Delta \\lambda$ = {linewidth_wvl.value_unit:.6f} {linewidth_wvl.unit.value}")
-
+    linewidth_wvl.unit = WAVELENGTH_UNIT_MAP[linewidth_wvl_unit_1]
+    st.subheader(
+        f"$\\Delta \\lambda$ = {linewidth_wvl.value_unit:.{decimal_places}f} {linewidth_wvl.unit.value}"
+    )
 
 with col2:
-    # OLD WAY
-    # st.subheader("$\Delta \lambda$ → $\Delta f$")
-    # freq_unit = st.radio("Frequency Unit", ["MHz", "GHz"], index=0, key="freq_unit_2")
-    # linewidth_nm = st.number_input("Linewidth (nm)", value=defaults["linewidth_nm"], step=0.001, format="%.4f")
-    # center_wavelength2 = st.number_input("Center Wavelength (nm)", value=defaults["wavelength"], step=0.1, key="center2")
-    # linewidth_ghz = linewidth_nm_to_GHz(linewidth_nm, center_wavelength2)
-    # if freq_unit == "GHz":
-    #     linewidth_freq = linewidth_ghz
-    # else:
-    #     linewidth_freq = linewidth_ghz*1e3
-
-    # st.subheader(f"$\Delta f$ = {linewidth_freq:.6f} {freq_unit}")
-    # st.divider()
-
     st.subheader("$\\Delta \\nu\\ = \\frac{c}{\\lambda_0^2} \\Delta \\lambda$")
-    freq_unit = st.radio("Frequency Unit", ["MHz", "GHz"], index=0, key="freq_unit_3")
     linewidth_wvl_input = st.number_input(
-        "Linewidth (nm)",
+        f"Linewidth ({linewidth_wvl_unit_2})",
         value=defaults["linewidth_nm"],
-        step=0.001,
-        format="%.4f",
+        step=step_size,
+        format=f"%.{decimal_places}f",
         key="linewidth_wvl",
     )
     center_wavelength_input = st.number_input(
-        "Center Wavelength (nm)",
+        f"Center Wavelength ({center_wavelength_unit_2})",
         value=defaults["wavelength"],
-        step=0.1,
-        key="center3",
+        step=step_size,
+        key="center_wavelength_2",
     )
 
-    linewidth_wvl = Wavelength(value_si=linewidth_wvl_input * 1e-9, unit=WavelengthUnit.NANOMETER)
-    center_wavelength = Wavelength(value_si=center_wavelength_input * 1e-9, unit=WavelengthUnit.NANOMETER)
-    linewidth_freq = linewidth_wvl_to_freq(linewidth_wvl, center_wavelength, freq_unit=freq_unit)
-    st.subheader(f"$\\Delta \\nu$ = {linewidth_freq.value_unit:.6f} {linewidth_freq.unit.value}")
+    linewidth_wvl_factor = WAVELENGTH_UNIT_FACTOR_MAP[linewidth_wvl_unit_2]
+    center_wavelength_factor = WAVELENGTH_UNIT_FACTOR_MAP[center_wavelength_unit_2]
+    linewidth_wvl = Wavelength(
+        value_si=linewidth_wvl_input * linewidth_wvl_factor,
+        unit=WAVELENGTH_UNIT_MAP[linewidth_wvl_unit_2],
+    )
+    center_wavelength = Wavelength(
+        value_si=center_wavelength_input * center_wavelength_factor,
+        unit=WAVELENGTH_UNIT_MAP[center_wavelength_unit_2],
+    )
+    linewidth_freq = linewidth_wvl_to_freq(
+        linewidth_wvl,
+        center_wavelength,
+        freq_unit=FREQUENCY_UNIT_MAP[freq_unit_2],
+    )
+    st.subheader(
+        f"$\\Delta \\nu$ = {linewidth_freq.value_unit:.{decimal_places}f} {linewidth_freq.unit.value}"
+    )
