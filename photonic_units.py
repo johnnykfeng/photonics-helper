@@ -326,6 +326,13 @@ class PhotonicUnit(BaseModel):
             "angular_frequency": angular_frequency,
         }
 
+    def __repr_args__(self) -> str:
+        return [
+            ('wavelength', f"{self.wavelength.value_unit:.2f} {self.wavelength.unit.value}"),
+            ('frequency', f"{self.frequency.value_unit:.2f} {self.frequency.unit.value}"),
+            ('angular_frequency', f"{self.angular_frequency.value_unit:.2f} {self.angular_frequency.unit.value}"),
+        ]
+
 
 # FREQUENCY_UNIT_MAP = {
 #     "Hz": FrequencyUnit.HERTZ,
@@ -362,13 +369,16 @@ class PhotonicUnit(BaseModel):
 # }
 
 if __name__ == "__main__":
-    # pu = PhotonicUnit(wavelength=Wavelength(value_si=532.0e-9, unit="nm"))
-    pu = PhotonicUnit(wavelength=[532.0e-9, 1550.0e-9])
+    pu = PhotonicUnit(wavelength=Wavelength(value_si=532.0e-9, unit="nm"))
+    # pu = PhotonicUnit(wavelength=[532.0e-9, 1550.0e-9])
+    print(pu)
+    pu.frequency.unit = FrequencyUnit.MEGAHERTZ
+    print(pu)
 
-    print(pu.wavelength.value_si)
-    print(pu.frequency.value_si)
-    print(pu.angular_frequency.value_si)
+    # print(pu.wavelength.value_si)
+    # print(pu.frequency.value_si)
+    # print(pu.angular_frequency.value_si)
 
-    print(pu.wavelength.value_unit, pu.wavelength.unit.value)
-    print(pu.frequency.value_unit, pu.frequency.unit.value)
-    print(pu.angular_frequency.value_unit, pu.angular_frequency.unit.value)
+    # print(pu.wavelength.value_unit, pu.wavelength.unit.value)
+    # print(pu.frequency.value_unit, pu.frequency.unit.value)
+    # print(pu.angular_frequency.value_unit, pu.angular_frequency.unit.value)
