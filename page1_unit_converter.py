@@ -8,15 +8,12 @@ from equations import (
     percent_to_dB,
 )
 from photonic_units import (
-    Frequency,
-    Wavelength,
-    PhotonicUnit,
     AngularFrequencyUnit,
-    FREQUENCY_UNIT_MAP,
-    FREQUENCY_UNIT_FACTOR_MAP,
-    WAVELENGTH_UNIT_MAP,
-    WAVELENGTH_UNIT_FACTOR_MAP,
-    
+    Frequency,
+    FrequencyUnit,
+    PhotonicUnit,
+    Wavelength,
+    WavelengthUnit,
 )
 
 st.set_page_config(page_title="Unit Converter", page_icon="🔢", layout="centered")
@@ -46,17 +43,25 @@ with col2:
     wavelength_input = st.number_input(f"Input Wavelength ({wavelength_unit})", value=defaults["wavelength"], step=step_size)
 
 with col1:
-    freq_unit_enum = FREQUENCY_UNIT_MAP[freq_unit]
-    freq_factor = FREQUENCY_UNIT_FACTOR_MAP[freq_unit]
-    pu = PhotonicUnit(frequency=Frequency(value_si=freq_input * freq_factor, unit=freq_unit_enum))
-    pu.wavelength.unit = WAVELENGTH_UNIT_MAP[wavelength_unit]
+    freq_unit_enum = FrequencyUnit(freq_unit)
+    pu = PhotonicUnit(
+        frequency=Frequency(
+            value_si=freq_input * freq_unit_enum.si_factor,
+            unit=freq_unit_enum,
+        )
+    )
+    pu.wavelength.unit = WavelengthUnit(wavelength_unit)
     st.subheader(f"$\\lambda$ = {pu.wavelength.value_unit:.{decimal_places}f} {pu.wavelength.unit.value}")
 
 with col2:
-    wavelength_unit_enum = WAVELENGTH_UNIT_MAP[wavelength_unit]
-    wavelength_factor = WAVELENGTH_UNIT_FACTOR_MAP[wavelength_unit]
-    pu = PhotonicUnit(wavelength=Wavelength(value_si=wavelength_input * wavelength_factor, unit=wavelength_unit_enum))
-    pu.frequency.unit = FREQUENCY_UNIT_MAP[freq_unit]
+    wavelength_unit_enum = WavelengthUnit(wavelength_unit)
+    pu = PhotonicUnit(
+        wavelength=Wavelength(
+            value_si=wavelength_input * wavelength_unit_enum.si_factor,
+            unit=wavelength_unit_enum,
+        )
+    )
+    pu.frequency.unit = FrequencyUnit(freq_unit)
     pu.angular_frequency.unit = AngularFrequencyUnit.RAD_PER_SEC
     st.subheader(f"$f$ = {pu.frequency.value_unit:.{decimal_places}f} {pu.frequency.unit.value}")
     omega_sci = f"{pu.angular_frequency.value_unit:.{decimal_places}e}"

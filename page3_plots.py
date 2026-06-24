@@ -4,13 +4,11 @@ import plotly.graph_objects as go
 
 from plots import dBm_vs_mW_plot, mW_vs_dBm_plot
 from photonic_units import (
-    FREQUENCY_UNIT_FACTOR_MAP,
-    FREQUENCY_UNIT_MAP,
-    WAVELENGTH_UNIT_FACTOR_MAP,
-    WAVELENGTH_UNIT_MAP,
     Frequency,
+    FrequencyUnit,
     PhotonicUnit,
     Wavelength,
+    WavelengthUnit,
 )
 
 FREQ_UNITS = ["MHz", "GHz", "THz"]
@@ -68,15 +66,17 @@ with st.expander("Wavelength vs Frequency", expanded=True):
         )
 
     wavelength_range = np.linspace(wavelength_min, wavelength_max, 1000)
+    wavelength_unit_enum = WavelengthUnit(wavelength_unit)
+    freq_unit_enum = FrequencyUnit(freq_unit)
     freq_values = []
     for wavelength_value in wavelength_range:
         pu = PhotonicUnit(
             wavelength=Wavelength(
-                value_si=wavelength_value * WAVELENGTH_UNIT_FACTOR_MAP[wavelength_unit],
-                unit=WAVELENGTH_UNIT_MAP[wavelength_unit],
+                value_si=wavelength_value * wavelength_unit_enum.si_factor,
+                unit=wavelength_unit_enum,
             )
         )
-        pu.frequency.unit = FREQUENCY_UNIT_MAP[freq_unit]
+        pu.frequency.unit = freq_unit_enum
         freq_values.append(pu.frequency.value_unit)
 
     fig = go.Figure()
@@ -110,15 +110,17 @@ with st.expander("Frequency vs Wavelength", expanded=True):
         freq_max = st.number_input(f"Max Frequency ({freq_unit})", value=5e5)
 
     freq_range = np.linspace(freq_min, freq_max, 1000)
+    freq_unit_enum = FrequencyUnit(freq_unit)
+    wavelength_unit_enum = WavelengthUnit(wavelength_unit)
     wavelength_values = []
     for freq_value in freq_range:
         pu = PhotonicUnit(
             frequency=Frequency(
-                value_si=freq_value * FREQUENCY_UNIT_FACTOR_MAP[freq_unit],
-                unit=FREQUENCY_UNIT_MAP[freq_unit],
+                value_si=freq_value * freq_unit_enum.si_factor,
+                unit=freq_unit_enum,
             )
         )
-        pu.wavelength.unit = WAVELENGTH_UNIT_MAP[wavelength_unit]
+        pu.wavelength.unit = wavelength_unit_enum
         wavelength_values.append(pu.wavelength.value_unit)
 
     fig = go.Figure()
